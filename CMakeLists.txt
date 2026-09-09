@@ -15,6 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(OUTPUT_NAME my_sniffer)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 # ===== OPTIONS =====
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
@@ -40,7 +41,42 @@ add_compile_definitions(CONFIG_PATH="${ABSOLUTE_CONFIG_PATH}")
 # ===== SOURCES =====
 add_executable(${OUTPUT_NAME}
     ${PROJECT_SOURCE_DIR}/src/main.cpp
+    ${PROJECT_SOURCE_DIR}/src/Helper.cpp
 )
+
+add_custom_target(re DEPENDS ${OUTPUT_NAME})
+
+# ===== TESTS =====
+find_package(PkgConfig QUIET)
+if (PkgConfig_FOUND)
+    pkg_check_modules(CRITERION QUIET criterion)
+endif()
+
+if (CRITERION_FOUND)
+    enable_testing()
+
+    add_executable(unit_tests
+        ${PROJECT_SOURCE_DIR}/tests/test_Helper.cpp
+        ${PROJECT_SOURCE_DIR}/src/Helper.cpp
+    )
+
+    target_include_directories(unit_tests PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
+        ${CRITERION_INCLUDE_DIRS}
+    )
+    target_link_libraries(unit_tests PRIVATE ${CRITERION_LIBRARIES})
+    target_compile_options(unit_tests PRIVATE ${CRITERION_CFLAGS_OTHER})
+
+    add_test(NAME unit_tests COMMAND unit_tests)
+
+    add_custom_target(run_tests
+        COMMAND unit_tests
+        DEPENDS unit_tests
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+else()
+    message(STATUS "Criterion not found, skipping unit_tests target")
+endif()
 
 if (WIN32)
     add_compile_definitions(_WINSOCK_DEPRECATED_NO_WARNINGS)

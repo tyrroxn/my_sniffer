@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2026
+** my_sniffer
+** File description:
+** Server
+*/
+
 #pragma once
 
 #ifdef _WIN32
@@ -16,6 +23,7 @@
     #include <sys/socket.h>
     #include <unistd.h>
 #endif
+
 #include <string>
 #include <unordered_map>
 #include <memory>
