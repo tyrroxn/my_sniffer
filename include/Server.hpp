@@ -24,25 +24,43 @@
     #include <unistd.h>
 #endif
 
-#include <string>
-#include <unordered_map>
-#include <memory>
 #include <chrono>
-#include <thread>
-#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
-namespace sniffer {
-namespace server {
 
-class Commands;
+namespace sniffer {
+
+enum class InterfaceType {
+    Ethernet,
+};
+
+enum class NetworkProtocol {
+    IPv4
+};
+
+enum class TransportProtocol {
+    TCP,
+    UDP,
+};
+
+struct RawPacket {
+    std::vector<std::uint8_t> buffer;
+    std::chrono::system_clock::time_point timestamp;
+    std::string sourceInterface;
+};
+
 
 class Server {
     public:
-        Server(int port);
-        ~Server();
+        Server() = default;
+        ~Server() = default;
     private:
 };
 
 }
-}
+
