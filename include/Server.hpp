@@ -54,6 +54,17 @@ struct RawPacket {
     std::string sourceInterface;
 };
 
+struct ParsedPacket {
+    std::string sourceInterface;
+    std::chrono::system_clock::time_point timestamp;
+    NetworkProtocol networkProtocol;
+    TransportProtocol transportProtocol;
+    std::string sourceAddress;
+    std::string destinationAddress;
+    std::uint16_t sourcePort;
+    std::uint16_t destinationPort;
+    std::vector<std::uint8_t> data;
+};
 
 class Server {
     public:
