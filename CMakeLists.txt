@@ -42,9 +42,15 @@ add_compile_definitions(CONFIG_PATH="${ABSOLUTE_CONFIG_PATH}")
 add_executable(${OUTPUT_NAME}
     ${PROJECT_SOURCE_DIR}/src/main.cpp
     ${PROJECT_SOURCE_DIR}/src/Helper.cpp
+    ${PROJECT_SOURCE_DIR}/src/Server.cpp
+    ${PROJECT_SOURCE_DIR}/src/SignalHandler.cpp
 )
 
-add_custom_target(re DEPENDS ${OUTPUT_NAME})
+add_custom_target(re
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${OUTPUT_NAME}
+    USES_TERMINAL
+)
 
 # ===== TESTS =====
 find_package(PkgConfig QUIET)
