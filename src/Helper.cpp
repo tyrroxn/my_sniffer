@@ -6,8 +6,7 @@
 */
 
 #include "Helper.hpp"
-
-namespace sniffer {
+using namespace sniffer;
 
 bool Helper::bynaryIPV4ToString(const unsigned char *ip, std::string &output)
 {
@@ -112,7 +111,7 @@ std::string Helper::hexdump(const unsigned char *buffer, std::size_t size)
         snprintf(buf, sizeof(buf), "%02x", buffer[i]);
         output += buf;
         if (i < size - 1)
-        output += " ";
+            output += " ";
     }
     return output;
 }
@@ -124,6 +123,4 @@ std::string Helper::rawBufferToString(const unsigned char *buffer, std::size_t s
     for (std::size_t i = 0; i < size; i++)
         output += static_cast<char>(buffer[i]);
     return output;
-}
-
 }

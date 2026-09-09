@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
+#include <iostream>
 
 namespace sniffer {
 
@@ -68,9 +68,13 @@ struct ParsedPacket {
 
 class Server {
     public:
-        Server() = default;
-        ~Server() = default;
+        Server();
+        ~Server();
+        int getSocketFd() const { return socketFd; }
+        bool getPacket(RawPacket &packet);
     private:
+        int socketFd;
+
 };
 
 }
