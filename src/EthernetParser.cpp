@@ -2,16 +2,17 @@
 ** EPITECH PROJECT, 2026
 ** my_sniffer
 ** File description:
-** EternetParser
+** EthernetParser
 */
 
-#include "EternetParser.hpp"
+#include "EthernetParser.hpp"
 #include "Helper.hpp"
 
 using namespace sniffer;
 
 
-bool EternetParser::parse(const std::vector<std::uint8_t> &buffer, EthernetHeader &header)
+
+bool EthernetParser::parse(const std::vector<std::uint8_t> &buffer, EthernetHeader &header)
 {
     // 2 adresses mac de 6 bytes + 2 bytes pour EtherType
     if (buffer.size() < 14)

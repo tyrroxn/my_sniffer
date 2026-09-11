@@ -5,17 +5,17 @@
 ** EternetParser
 */
 
-#ifndef ETERNETPARSER_HPP_
-#define ETERNETPARSER_HPP_
+#ifndef ETHERNETPARSER_HPP_
+#define ETHERNETPARSER_HPP_
 
 #include "Packet.hpp"
 
 namespace sniffer {
 
-class EternetParser {
+class EthernetParser {
     public:
-        EternetParser() = default;
-        ~EternetParser() = default;
+        EthernetParser() = default;
+        ~EthernetParser() = default;
 
         static bool parse(const std::vector<std::uint8_t> &buffer,
             EthernetHeader &header);
