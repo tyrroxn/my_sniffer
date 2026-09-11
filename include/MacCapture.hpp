@@ -27,6 +27,9 @@ class MacCapture: public CaptureNetwork {
         std::size_t bufferLen = 0;
         std::size_t pos = 0;
         std::size_t validLen = 0;
+
+        bool fillBuffer();
+        bool extractRecord(RawPacket &packet);
 };
 
 }
