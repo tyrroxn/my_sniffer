@@ -29,8 +29,8 @@ bool EthernetParser::parse(const std::vector<std::uint8_t> &buffer, EthernetHead
 {
     std::uint16_t tagOrEtherType = 0;
 
-    // 2 adresses mac de 6 bytes + 2 bytes pour EtherType + 4 bytes si tag VLAN
-    if (buffer.size() < 14 + VLAN_TAG_LEN)
+    // 2 adresses mac de 6 bytes + 2 bytes pour EtherType + 4 bytes si VLAN tag
+    if (buffer.size() < 14)
         return false;
 
     const unsigned char *data = buffer.data();
