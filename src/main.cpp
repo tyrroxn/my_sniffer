@@ -6,6 +6,7 @@
 */
 #include "CaptureNetwork.hpp"
 #include "SignalHandler.hpp"
+#include "EthernetParser.hpp"
 #include <memory>
 
 #if defined(__APPLE__)
