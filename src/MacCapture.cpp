@@ -36,6 +36,8 @@ void MacCapture::start()
         socketFd = open(path, O_RDWR);
         if (socketFd >= 0)
             break;
+        if (errno == ENOENT)
+            break;
     }
 
     if (socketFd < 0) {
@@ -45,6 +47,9 @@ void MacCapture::start()
                 "this user to the BPF access group with "
                 "'sudo dseditgroup -o edit -a $(whoami) -t user access_bpf'."
                 << std::endl;
+        else if (errno == EBUSY)
+            std::cerr << "All BPF devices are in use by another process "
+                "(e.g. Wireshark, tcpdump). Close it and retry." << std::endl;
         exit(1);
     }
 
