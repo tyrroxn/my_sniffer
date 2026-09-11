@@ -2,14 +2,14 @@
 ** EPITECH PROJECT, 2026
 ** my_sniffer
 ** File description:
-** Server
+** LinuxCapture
 */
-#include "Server.hpp"
-#include "Helper.hpp"
-#include <cerrno>
+
+#include "LinuxCapture.hpp"
 using namespace sniffer;
 
-Server::Server()
+
+void LinuxCapture::start()
 {
     socketFd = socket(AF_PACKET, SOCK_RAW, Helper::hostToNetwork16(0x0003));
     if (socketFd < 0) {
@@ -19,13 +19,15 @@ Server::Server()
     }
 }
 
-Server::~Server()
+void LinuxCapture::stop()
 {
-    close(socketFd);
+    if (socketFd >= 0)
+        close(socketFd);
 }
 
-bool Server::getPacket(RawPacket &packet)
+bool LinuxCapture::receive(RawPacket &packet)
 {
+
     uint8_t buffer[65536];
     ssize_t size = recvfrom(socketFd, buffer, sizeof(buffer), 0,
         nullptr,
