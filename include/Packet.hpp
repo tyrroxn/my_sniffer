@@ -42,6 +42,7 @@ struct EthernetHeader {
     std::string destinationMac;
     std::string sourceMac;
     std::uint16_t etherType;
+    bool vlanTagged = false;
 };
 
 struct RawPacket {
