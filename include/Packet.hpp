@@ -33,6 +33,17 @@ enum class TransportProtocol {
     UDP,
 };
 
+enum class EthernetType {
+    IPv4 = 0x0800,
+    ARP = 0x0806,
+    IPv6 = 0x86DD
+};
+struct EthernetHeader {
+    std::string destinationMac;
+    std::string sourceMac;
+    std::uint16_t etherType;
+};
+
 struct RawPacket {
     std::vector<std::uint8_t> buffer;
     std::chrono::system_clock::time_point timestamp;

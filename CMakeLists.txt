@@ -51,6 +51,7 @@ add_executable(${OUTPUT_NAME}
     ${PROJECT_SOURCE_DIR}/src/main.cpp
     ${PROJECT_SOURCE_DIR}/src/Helper.cpp
     ${PROJECT_SOURCE_DIR}/src/SignalHandler.cpp
+    ${PROJECT_SOURCE_DIR}/src/EternetParser.cpp
     ${PLATFORM_CAPTURE_SOURCE}
 )
 
