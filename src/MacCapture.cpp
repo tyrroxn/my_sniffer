@@ -34,10 +34,18 @@ void MacCapture::start()
     for (int i = 0; i < 256; i++) {
         std::snprintf(path, sizeof(path), "/dev/bpf%d", i);
         socketFd = open(path, O_RDWR);
+
         if (socketFd >= 0)
             break;
+
         if (errno == ENOENT)
             break;
+
+        if (errno == EACCES || errno == EPERM) {
+            std::cerr << "Permission denied while opening " << path
+                      << ". Run the program with sudo." << std::endl;
+            break;
+        }
     }
 
     if (socketFd < 0) {
@@ -93,34 +101,74 @@ void MacCapture::stop()
 
 bool MacCapture::receive(RawPacket &packet)
 {
+    if (socketFd < 0)
+        return false;
+
     if (pos >= validLen) {
-        const ssize_t bytesRead = read(socketFd, buffer.data(), buffer.size());
+        ssize_t bytesRead;
+
+        do {
+            bytesRead = read(socketFd, buffer.data(), buffer.size());
+        } while (bytesRead < 0 && errno == EINTR);
 
         if (bytesRead <= 0) {
-            if (bytesRead < 0 && errno != EINTR)
-                perror("read(bpf)");
+            if (bytesRead == 0) {
+                std::cerr << "BPF returned EOF" << std::endl;
+            } else {
+                std::cerr << "read(bpf) failed: "
+                          << std::strerror(errno) << std::endl;
+            }
             return false;
         }
+
         validLen = static_cast<std::size_t>(bytesRead);
         pos = 0;
     }
 
-    const auto *header = reinterpret_cast<const struct bpf_hdr *>(buffer.data() + pos);
-    const std::size_t headerLength = header->bh_hdrlen;
-    const std::size_t capturedLength = header->bh_caplen;
-
-    if (headerLength < sizeof(struct bpf_hdr) ||
-        pos + headerLength > validLen ||
-        capturedLength > validLen - pos - headerLength) {
+    if (validLen - pos < sizeof(struct bpf_hdr)) {
         validLen = 0;
         pos = 0;
         return false;
     }
 
-    packet.buffer.assign(buffer.begin() + pos + headerLength,
+    const auto *header =
+        reinterpret_cast<const struct bpf_hdr *>(buffer.data() + pos);
+
+    const std::size_t headerLength = header->bh_hdrlen;
+    const std::size_t capturedLength = header->bh_caplen;
+
+    const std::size_t minimumHeaderLength =
+        offsetof(struct bpf_hdr, bh_hdrlen) +
+        sizeof(header->bh_hdrlen);
+
+    if (headerLength < minimumHeaderLength ||
+        headerLength > validLen - pos ||
+        capturedLength > validLen - pos - headerLength) {
+        std::cerr << "Invalid BPF packet header: "
+                  << "headerLength=" << headerLength
+                  << ", capturedLength=" << capturedLength
+                  << ", available=" << (validLen - pos)
+                  << std::endl;
+        validLen = 0;
+        pos = 0;
+        return false;
+    }
+
+    packet.buffer.assign(
+        buffer.begin() + pos + headerLength,
         buffer.begin() + pos + headerLength + capturedLength);
+
     packet.timestamp = std::chrono::system_clock::now();
 
-    pos += BPF_WORDALIGN(headerLength + capturedLength);
+    const std::size_t recordLength =
+        BPF_WORDALIGN(headerLength + capturedLength);
+
+    if (recordLength > validLen - pos) {
+        validLen = 0;
+        pos = 0;
+    } else {
+        pos += recordLength;
+    }
+
     return true;
 }
