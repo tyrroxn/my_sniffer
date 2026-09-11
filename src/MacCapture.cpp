@@ -122,6 +122,7 @@ bool MacCapture::fillBuffer()
 
 bool MacCapture::extractRecord(RawPacket &packet)
 {
+    // Check si assez de place pour contenir Header BPF complet.
     if (validLen - pos < sizeof(struct bpf_hdr)) {
         std::cerr << "MacCapture: truncated BPF record, dropping remainder of buffer" << std::endl;
         validLen = 0;
@@ -133,9 +134,9 @@ bool MacCapture::extractRecord(RawPacket &packet)
         reinterpret_cast<const struct bpf_hdr *>(buffer.data() + pos);
     const std::size_t headerLength = header->bh_hdrlen;
     const std::size_t capturedLength = header->bh_caplen;
-    const std::size_t minimumHeaderLength =
-        offsetof(struct bpf_hdr, bh_hdrlen) + sizeof(header->bh_hdrlen);
+    const std::size_t minimumHeaderLength = offsetof(struct bpf_hdr, bh_hdrlen) + sizeof(header->bh_hdrlen);
 
+    // Check si on reste dans le buffer
     if (headerLength < minimumHeaderLength ||
         headerLength > validLen - pos ||
         capturedLength > validLen - pos - headerLength) {
@@ -151,12 +152,13 @@ bool MacCapture::extractRecord(RawPacket &packet)
     packet.timestamp = std::chrono::system_clock::now();
 
     const std::size_t recordLength = BPF_WORDALIGN(headerLength + capturedLength);
+
     if (recordLength > validLen - pos) {
         validLen = 0;
         pos = 0;
-    } else {
+    } else
         pos += recordLength;
-    }
+
     return true;
 }
 
