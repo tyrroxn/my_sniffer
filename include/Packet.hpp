@@ -7,23 +7,8 @@
 
 #pragma once
 
-#ifdef _WIN32
-    #include <winsock2.h>
-    #ifndef WIN32_LEAN_AND_MEAN
-    #  define WIN32_LEAN_AND_MEAN
-    #endif
-    #ifndef NOMINMAX
-    #  define NOMINMAX
-    #endif
-    #include <windows.h>
-    #ifdef ERROR
-    #  undef ERROR
-    #endif
-#else
-    #include <sys/socket.h>
-    #include <unistd.h>
-#endif
 
+#include <unistd.h>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -64,17 +49,6 @@ struct ParsedPacket {
     std::uint16_t sourcePort;
     std::uint16_t destinationPort;
     std::vector<std::uint8_t> data;
-};
-
-class Server {
-    public:
-        Server();
-        ~Server();
-        int getSocketFd() const { return socketFd; }
-        bool getPacket(RawPacket &packet);
-    private:
-        int socketFd;
-
 };
 
 }

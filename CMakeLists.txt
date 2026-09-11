@@ -39,11 +39,19 @@ add_compile_definitions(CONFIG_PATH="${ABSOLUTE_CONFIG_PATH}")
 
 
 # ===== SOURCES =====
+if (APPLE)
+    set(PLATFORM_CAPTURE_SOURCE ${PROJECT_SOURCE_DIR}/src/MacCapture.cpp)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(PLATFORM_CAPTURE_SOURCE ${PROJECT_SOURCE_DIR}/src/LinuxCapture.cpp)
+else()
+    message(FATAL_ERROR "No capture backend implemented for this platform")
+endif()
+
 add_executable(${OUTPUT_NAME}
     ${PROJECT_SOURCE_DIR}/src/main.cpp
     ${PROJECT_SOURCE_DIR}/src/Helper.cpp
-    ${PROJECT_SOURCE_DIR}/src/Server.cpp
     ${PROJECT_SOURCE_DIR}/src/SignalHandler.cpp
+    ${PLATFORM_CAPTURE_SOURCE}
 )
 
 add_custom_target(re

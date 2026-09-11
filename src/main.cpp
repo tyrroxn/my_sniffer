@@ -4,9 +4,18 @@
 ** File description:
 ** main
 */
-#include "Helper.hpp"
-#include "Server.hpp"
+#include "CaptureNetwork.hpp"
 #include "SignalHandler.hpp"
+#include <memory>
+
+#if defined(__APPLE__)
+    #include "MacCapture.hpp"
+#elif defined(__linux__)
+    #include "LinuxCapture.hpp"
+#else
+    #error "No capture backend implemented for this platform"
+#endif
+
 using namespace sniffer;
 
 int main(int argc, char **argv)
@@ -15,12 +24,19 @@ int main(int argc, char **argv)
     (void)argv;
 
     SignalHandler::install();
-    Server server;
+
+#if defined(__APPLE__)
+    std::unique_ptr<CaptureNetwork> capture = std::make_unique<MacCapture>();
+#elif defined(__linux__)
+    std::unique_ptr<CaptureNetwork> capture = std::make_unique<LinuxCapture>();
+#endif
+
+    capture->start();
     std::size_t packetCount = 0;
 
     while (SignalHandler::running()) {
         RawPacket packet;
-        if (!server.getPacket(packet)) {
+        if (!capture->capture(packet)) {
             if (!SignalHandler::running())
                 break;
             std::cerr << "Failed to get packet" << std::endl;
@@ -29,6 +45,7 @@ int main(int argc, char **argv)
         packetCount++;
     }
 
+    capture->stop();
     std::cout << "\nCapture stopped, " << packetCount
               << " packet(s) captured." << std::endl;
     return 0;
