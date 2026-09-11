@@ -86,7 +86,7 @@ void MacCapture::stop()
     pos = 0;
 }
 
-bool MacCapture::capture(RawPacket &packet)
+bool MacCapture::receive(RawPacket &packet)
 {
     if (pos >= validLen) {
         const ssize_t bytesRead = read(socketFd, buffer.data(), buffer.size());

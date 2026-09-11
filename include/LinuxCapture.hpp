@@ -20,7 +20,7 @@ class LinuxCapture : public CaptureNetwork {
         ~LinuxCapture() = default;
         void start() override;
         void stop() override;
-        bool capture(RawPacket &packet) override;
+        bool receive(RawPacket &packet) override;
         int getSocketFd() const { return socketFd; }
     private:
         int socketFd;

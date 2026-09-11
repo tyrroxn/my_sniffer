@@ -17,7 +17,7 @@ class CaptureNetwork {
         virtual ~CaptureNetwork() = default;
         virtual void start() = 0;
         virtual void stop() = 0;
-        virtual bool capture(RawPacket &packet) = 0;
+        virtual bool receive(RawPacket &packet) = 0;
     private:
 };
 

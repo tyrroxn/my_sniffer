@@ -18,7 +18,7 @@ class MacCapture: public CaptureNetwork {
         ~MacCapture() = default;
         void start() override;
         void stop() override;
-        bool capture(RawPacket &packet) override;
+        bool receive(RawPacket &packet) override;
         int getSocketFd() const { return socketFd; }
 
     private:

@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 
     while (SignalHandler::running()) {
         RawPacket packet;
-        if (!capture->capture(packet)) {
+        if (!capture->receive(packet)) {
             if (!SignalHandler::running())
                 break;
             std::cerr << "Failed to get packet" << std::endl;

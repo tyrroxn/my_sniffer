@@ -25,7 +25,7 @@ void LinuxCapture::stop()
         close(socketFd);
 }
 
-bool LinuxCapture::capture(RawPacket &packet)
+bool LinuxCapture::receive(RawPacket &packet)
 {
 
     uint8_t buffer[65536];
