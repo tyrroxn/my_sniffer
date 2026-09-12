@@ -38,6 +38,19 @@ enum class EthernetType {
     ARP = 0x0806,
     IPv6 = 0x86DD
 };
+
+struct Ipv4Header {
+    std::uint8_t version;
+    std::uint8_t ihl;
+    std::uint8_t typeOfService;
+    std::uint16_t totalLength;
+    std::uint8_t ttl;
+    std::uint8_t protocol;
+    std::uint16_t headerChecksum;
+    bool checksumValid = false;
+    std::string sourceAddress;
+    std::string destinationAddress;
+};
 struct EthernetHeader {
     std::string destinationMac;
     std::string sourceMac;
