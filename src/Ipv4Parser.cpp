@@ -10,6 +10,24 @@
 
 using namespace sniffer;
 
+bool Ipv4Parser::checkSum(const unsigned char *data, std::size_t headerLength) {
+
+    uint32_t checksum = 0;
+    uint16_t twoBytes;
+
+    for (std::size_t i = 0; i < headerLength; i += 2) {
+        twoBytes = static_cast<uint16_t>(data[i] << 8) + data[i + 1];
+        checksum += twoBytes;
+
+        if (checksum > 0xFFFF)
+            checksum = (checksum & 0xFFFF) + 1;
+    }
+
+    if  (checksum != 0xFFFF)
+        return false;
+
+    return true;
+}
 
 
 bool Ipv4Parser::parse(const std::vector<std::uint8_t> &buffer, Ipv4Header &header)
@@ -38,6 +56,8 @@ bool Ipv4Parser::parse(const std::vector<std::uint8_t> &buffer, Ipv4Header &head
 
     if (!Helper::readUint16(data, buffer.size(), 10, header.headerChecksum))
         return false;
+
+    header.checksumValid = checkSum(data, headerLength);
 
     if (!Helper::bynaryIPV4ToString(data + 12, header.sourceAddress))
         return false;

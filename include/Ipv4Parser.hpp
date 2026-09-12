@@ -24,6 +24,7 @@ class Ipv4Parser {
 
     protected:
     private:
+        static bool checkSum(const unsigned char *data, std::size_t headerLength);
 };
 
 }
