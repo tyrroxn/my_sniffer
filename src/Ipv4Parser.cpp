@@ -58,6 +58,8 @@ bool Ipv4Parser::parse(const std::vector<std::uint8_t> &buffer, Ipv4Header &head
     if (header.ihl < IPV4_MIN_IHL || headerLength > buffer.size())
         return false;
 
+    header.headerLength = headerLength;
+
     header.typeOfService = data[1];
 
     if (!Helper::readUint16(data, buffer.size(), 2, header.totalLength))
