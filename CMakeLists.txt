@@ -55,6 +55,8 @@ add_executable(${OUTPUT_NAME}
     ${PROJECT_SOURCE_DIR}/src/Ipv4Parser.cpp
     ${PROJECT_SOURCE_DIR}/src/TcpParser.cpp
     ${PROJECT_SOURCE_DIR}/src/UdpParser.cpp
+    ${PROJECT_SOURCE_DIR}/src/PacketDisplay.cpp
+    ${PROJECT_SOURCE_DIR}/src/TerminalInput.cpp
     ${PLATFORM_CAPTURE_SOURCE}
 )
 
