@@ -76,6 +76,7 @@ struct TcpHeader {
     std::uint16_t checksum;
     std::uint16_t urgentPointer;
     std::size_t headerLength = 0;
+    std::vector<std::uint8_t> payload;
 };
 struct EthernetHeader {
     std::string destinationMac;

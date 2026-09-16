@@ -40,6 +40,7 @@ bool TcpParser::parse(const std::vector<std::uint8_t> &buffer, TcpHeader &header
 {
     if (buffer.size() < 20)
         return false;
+
     const unsigned char *data = buffer.data();
 
     if (Helper::readUint16(data, buffer.size(), 0, header.sourcePort) == false)
@@ -85,6 +86,8 @@ bool TcpParser::parse(const std::vector<std::uint8_t> &buffer, TcpHeader &header
 
     if (Helper::readUint16(data, buffer.size(), 18, header.urgentPointer) == false)
         return false;
+
+    header.payload.assign(buffer.begin() + static_cast<std::ptrdiff_t>(headerLength), buffer.end());
 
     return true;
 }
