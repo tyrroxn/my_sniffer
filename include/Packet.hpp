@@ -78,6 +78,15 @@ struct TcpHeader {
     std::size_t headerLength = 0;
     std::vector<std::uint8_t> payload;
 };
+
+struct UdpHeader {
+    std::uint16_t sourcePort;
+    std::uint16_t destinationPort;
+    std::uint16_t length;
+    std::uint16_t checksum;
+    std::vector<std::uint8_t> payload;
+};
+
 struct EthernetHeader {
     std::string destinationMac;
     std::string sourceMac;
