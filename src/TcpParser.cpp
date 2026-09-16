@@ -10,6 +10,32 @@
 
 using namespace sniffer;
 
+std::string TcpParser::flagsLabel(const TcpHeader &header)
+{
+    std::string label = "[";
+    bool first = true;
+
+    const std::pair<bool, const char *> flags[] = {
+        {header.SYN_flag, "SYN"}, {header.FIN_flag, "FIN"},
+        {header.RST_flag, "RST"}, {header.PSH_flag, "PSH"},
+        {header.ACK_flag, "ACK"}, {header.URG_flag, "URG"},
+        {header.ECE_flag, "ECE"}, {header.CWR_flag, "CWR"},
+        {header.NS_flag, "NS"}
+    };
+
+    for (const auto &[set, name] : flags) {
+        if (!set)
+            continue;
+        if (!first)
+            label += ", ";
+        label += name;
+        first = false;
+    }
+
+    label += "]";
+    return label;
+}
+
 bool TcpParser::parse(const std::vector<std::uint8_t> &buffer, TcpHeader &header)
 {
     if (buffer.size() < 20)

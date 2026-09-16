@@ -17,6 +17,7 @@ class TcpParser {
         ~TcpParser() = default;
         static bool parse(const std::vector<std::uint8_t> &buffer,
             TcpHeader &header);
+        static std::string flagsLabel(const TcpHeader &header);
 
     protected:
     private:
