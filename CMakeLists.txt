@@ -52,6 +52,7 @@ add_executable(${OUTPUT_NAME}
     ${PROJECT_SOURCE_DIR}/src/Helper.cpp
     ${PROJECT_SOURCE_DIR}/src/SignalHandler.cpp
     ${PROJECT_SOURCE_DIR}/src/EthernetParser.cpp
+    ${PROJECT_SOURCE_DIR}/src/Ipv4Parser.cpp
     ${PLATFORM_CAPTURE_SOURCE}
 )
 
@@ -75,6 +76,7 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/tests/test_EthernetParser.cpp
         ${PROJECT_SOURCE_DIR}/src/Helper.cpp
         ${PROJECT_SOURCE_DIR}/src/EthernetParser.cpp
+        ${PROJECT_SOURCE_DIR}/src/Ipv4Parser.cpp
     )
 
     target_include_directories(unit_tests PUBLIC
