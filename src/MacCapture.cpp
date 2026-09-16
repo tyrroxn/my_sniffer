@@ -130,8 +130,7 @@ bool MacCapture::extractRecord(RawPacket &packet)
         return false;
     }
 
-    const auto *header =
-        reinterpret_cast<const struct bpf_hdr *>(buffer.data() + pos);
+    const auto *header = reinterpret_cast<const struct bpf_hdr *>(buffer.data() + pos);
     const std::size_t headerLength = header->bh_hdrlen;
     const std::size_t capturedLength = header->bh_caplen;
     const std::size_t minimumHeaderLength = offsetof(struct bpf_hdr, bh_hdrlen) + sizeof(header->bh_hdrlen);
