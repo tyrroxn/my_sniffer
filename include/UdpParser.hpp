@@ -14,7 +14,7 @@ class UdpParser {
     public:
         UdpParser() = default;
         ~UdpParser() = default;
-        bool parse(const std::vector<std::uint8_t> &buffer, UdpHeader &header);
+        static bool parse(const std::vector<std::uint8_t> &buffer, UdpHeader &header);
 
     protected:
     private:
