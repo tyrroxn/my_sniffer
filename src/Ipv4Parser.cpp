@@ -10,6 +10,18 @@
 
 using namespace sniffer;
 
+const char *Ipv4Parser::protocolName(std::uint8_t protocol)
+{
+    switch (protocol) {
+        case 6:
+            return "TCP";
+        case 17:
+            return "UDP";
+        default:
+            return "Unknown";
+    }
+}
+
 bool Ipv4Parser::checkSum(const unsigned char *data, std::size_t headerLength) {
 
     uint32_t checksum = 0;
@@ -50,6 +62,19 @@ bool Ipv4Parser::parse(const std::vector<std::uint8_t> &buffer, Ipv4Header &head
 
     if (!Helper::readUint16(data, buffer.size(), 2, header.totalLength))
         return false;
+
+    uint16_t flagsAndOffset;
+
+    if (!Helper::readUint16(data, buffer.size(), 6, flagsAndOffset))
+        return false;
+
+    //14 eme bit
+    header.DF_flag = (flagsAndOffset & 0x4000) != 0;
+    //13 eme bit
+    header.MF_flag = (flagsAndOffset & 0x2000) != 0;
+    // 0-12 eme bits
+    header.fragmentOffset = flagsAndOffset & 0x1FFF;
+    header.isFragmented = header.MF_flag || header.fragmentOffset != 0;
 
     header.ttl = data[8];
     header.protocol = data[9];

@@ -21,6 +21,7 @@ class Ipv4Parser {
 
         static bool parse(const std::vector<std::uint8_t> &buffer,
             Ipv4Header &header);
+        static const char *protocolName(std::uint8_t protocol);
 
     protected:
     private:

@@ -48,6 +48,10 @@ struct Ipv4Header {
     std::uint8_t protocol;
     std::uint16_t headerChecksum;
     bool checksumValid = false;
+    bool DF_flag = false;
+    bool MF_flag = false;
+    bool isFragmented = false;
+    std::uint16_t fragmentOffset = 0;
     std::string sourceAddress;
     std::string destinationAddress;
 };
