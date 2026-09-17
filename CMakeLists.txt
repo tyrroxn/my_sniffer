@@ -91,18 +91,20 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/tests/test_Ipv4Parser.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_TcpParser.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_UdpParser.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_Logger.cpp
         ${PROJECT_SOURCE_DIR}/src/Helper.cpp
         ${PROJECT_SOURCE_DIR}/src/EthernetParser.cpp
         ${PROJECT_SOURCE_DIR}/src/Ipv4Parser.cpp
         ${PROJECT_SOURCE_DIR}/src/TcpParser.cpp
         ${PROJECT_SOURCE_DIR}/src/UdpParser.cpp
+        ${PROJECT_SOURCE_DIR}/src/Logger.cpp
     )
 
     target_include_directories(unit_tests PUBLIC
         ${PROJECT_SOURCE_DIR}/include
         ${CRITERION_INCLUDE_DIRS}
     )
-    target_link_libraries(unit_tests PRIVATE ${CRITERION_LIBRARIES})
+    target_link_libraries(unit_tests PRIVATE ${CRITERION_LIBRARIES} spdlog::spdlog)
     target_compile_options(unit_tests PRIVATE ${CRITERION_CFLAGS_OTHER})
 
     add_test(NAME unit_tests COMMAND unit_tests)
