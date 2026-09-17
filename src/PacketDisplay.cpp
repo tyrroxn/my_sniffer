@@ -43,6 +43,7 @@ void PacketDisplay::show(const RawPacket &packet, const EthernetHeader &ethernet
         showDetailed(packet, ethernet, ipv4, tcp, udp);
     else
         showMinimum(packet, ethernet, ipv4, tcp, udp);
+    return;
 }
 
 void PacketDisplay::showMinimum(const RawPacket &packet, const EthernetHeader &ethernet,
@@ -65,6 +66,7 @@ void PacketDisplay::showMinimum(const RawPacket &packet, const EthernetHeader &e
     } else
         std::cout << "EtherType 0x" << std::hex << ethernet.etherType << std::dec;
     std::cout << "  " << packet.buffer.size() << "B" << std::endl;
+    return;
 }
 
 void PacketDisplay::showDetailed(const RawPacket &packet, const EthernetHeader &ethernet,
@@ -122,6 +124,7 @@ void PacketDisplay::showDetailed(const RawPacket &packet, const EthernetHeader &
         }
     }
     std::cout << std::endl;
+    return;
 }
 
 void PacketDisplay::displayStats(std::size_t captured, std::size_t errors) const
@@ -130,4 +133,5 @@ void PacketDisplay::displayStats(std::size_t captured, std::size_t errors) const
         << "  packets captured: " << captured << "\n"
         << "  errors: " << errors << std::endl;
     std::cout.flush();
+    return;
 }

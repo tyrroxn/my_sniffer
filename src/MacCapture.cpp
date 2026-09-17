@@ -87,6 +87,7 @@ void MacCapture::start()
 
     bufferLen = len;
     buffer.resize(bufferLen);
+    return;
 }
 
 void MacCapture::stop()
@@ -97,6 +98,7 @@ void MacCapture::stop()
     }
     validLen = 0;
     pos = 0;
+    return;
 }
 
 bool MacCapture::fillBuffer()

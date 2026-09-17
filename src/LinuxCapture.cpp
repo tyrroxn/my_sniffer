@@ -17,12 +17,14 @@ void LinuxCapture::start()
         std::cerr << "Use sudo setcap cap_net_raw+ep ./my_sniffer to allow raw socket usage without root privileges." << std::endl;
         exit(1);
     }
+    return;
 }
 
 void LinuxCapture::stop()
 {
     if (socketFd >= 0)
         close(socketFd);
+    return;
 }
 
 bool LinuxCapture::receive(RawPacket &packet)

@@ -38,6 +38,13 @@ get_filename_component(ABSOLUTE_CONFIG_PATH "${PROJECT_SOURCE_DIR}/config" ABSOL
 add_compile_definitions(CONFIG_PATH="${ABSOLUTE_CONFIG_PATH}")
 
 
+# ===== LOGGING =====
+find_package(spdlog QUIET)
+if (NOT spdlog_FOUND)
+    message(FATAL_ERROR "spdlog not found. Install it: "
+        "'sudo apt install libspdlog-dev' (Linux) or 'brew install spdlog' (macOS).")
+endif()
+
 # ===== SOURCES =====
 if (APPLE)
     set(PLATFORM_CAPTURE_SOURCE ${PROJECT_SOURCE_DIR}/src/MacCapture.cpp)
@@ -57,8 +64,11 @@ add_executable(${OUTPUT_NAME}
     ${PROJECT_SOURCE_DIR}/src/UdpParser.cpp
     ${PROJECT_SOURCE_DIR}/src/PacketDisplay.cpp
     ${PROJECT_SOURCE_DIR}/src/TerminalInput.cpp
+    ${PROJECT_SOURCE_DIR}/src/Logger.cpp
     ${PLATFORM_CAPTURE_SOURCE}
 )
+
+target_link_libraries(${OUTPUT_NAME} PRIVATE spdlog::spdlog)
 
 add_custom_target(re
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean

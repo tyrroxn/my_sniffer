@@ -19,6 +19,7 @@ void SignalHandler::install()
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
     sigaction(SIGINT, &sa, nullptr);
+    return;
 }
 
 bool SignalHandler::running()
@@ -29,4 +30,5 @@ bool SignalHandler::running()
 void SignalHandler::handle(int)
 {
     running_ = 0;
+    return;
 }
