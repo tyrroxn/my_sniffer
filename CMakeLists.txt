@@ -38,6 +38,13 @@ get_filename_component(ABSOLUTE_CONFIG_PATH "${PROJECT_SOURCE_DIR}/config" ABSOL
 add_compile_definitions(CONFIG_PATH="${ABSOLUTE_CONFIG_PATH}")
 
 
+# ===== LOGGING =====
+find_package(spdlog QUIET)
+if (NOT spdlog_FOUND)
+    message(FATAL_ERROR "spdlog not found. Install it: "
+        "'sudo apt install libspdlog-dev' (Linux) or 'brew install spdlog' (macOS).")
+endif()
+
 # ===== SOURCES =====
 if (APPLE)
     set(PLATFORM_CAPTURE_SOURCE ${PROJECT_SOURCE_DIR}/src/MacCapture.cpp)
@@ -57,8 +64,11 @@ add_executable(${OUTPUT_NAME}
     ${PROJECT_SOURCE_DIR}/src/UdpParser.cpp
     ${PROJECT_SOURCE_DIR}/src/PacketDisplay.cpp
     ${PROJECT_SOURCE_DIR}/src/TerminalInput.cpp
+    ${PROJECT_SOURCE_DIR}/src/Logger.cpp
     ${PLATFORM_CAPTURE_SOURCE}
 )
+
+target_link_libraries(${OUTPUT_NAME} PRIVATE spdlog::spdlog)
 
 add_custom_target(re
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
@@ -81,18 +91,20 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/tests/test_Ipv4Parser.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_TcpParser.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_UdpParser.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_Logger.cpp
         ${PROJECT_SOURCE_DIR}/src/Helper.cpp
         ${PROJECT_SOURCE_DIR}/src/EthernetParser.cpp
         ${PROJECT_SOURCE_DIR}/src/Ipv4Parser.cpp
         ${PROJECT_SOURCE_DIR}/src/TcpParser.cpp
         ${PROJECT_SOURCE_DIR}/src/UdpParser.cpp
+        ${PROJECT_SOURCE_DIR}/src/Logger.cpp
     )
 
     target_include_directories(unit_tests PUBLIC
         ${PROJECT_SOURCE_DIR}/include
         ${CRITERION_INCLUDE_DIRS}
     )
-    target_link_libraries(unit_tests PRIVATE ${CRITERION_LIBRARIES})
+    target_link_libraries(unit_tests PRIVATE ${CRITERION_LIBRARIES} spdlog::spdlog)
     target_compile_options(unit_tests PRIVATE ${CRITERION_CFLAGS_OTHER})
 
     add_test(NAME unit_tests COMMAND unit_tests)

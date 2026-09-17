@@ -23,10 +23,10 @@ class PacketDisplay {
         PacketDisplay() = default;
         ~PacketDisplay() = default;
 
-        void setMode(Mode mod) { mode = mod; }
-        void toggleMode() { mode = (mode == Mode::Minimum) ? Mode::Detailed : Mode::Minimum; };
+        void setMode(Mode mod) { mode = mod; return; }
+        void toggleMode() { mode = (mode == Mode::Minimum) ? Mode::Detailed : Mode::Minimum; return; }
         Mode getMode() const { return mode; }
-        void togglePause() { paused = !paused; }
+        void togglePause() { paused = !paused; return; }
         bool getPaused() const { return paused; }
 
         void show(const RawPacket &packet, const EthernetHeader &ethernet, const std::optional<Ipv4Header> &ipv4 = std::nullopt,
