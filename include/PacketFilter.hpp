@@ -39,6 +39,7 @@ class PacketFilter {
         bool matchesIpv4Address(const std::string &key, const std::string &address) const;
         bool matchesTcpFlags(const std::vector<std::string> &flags, const TcpHeader &tcp) const;
         bool matchesSize(const std::string &key, std::size_t packetSize, bool isMinimum) const;
+        bool matchesContains(const std::vector<std::uint8_t> &payload) const;
         static std::string classifyProtocol(const EthernetHeader &ethernet,
             const std::optional<Ipv4Header> &ipv4);
         void addValues(const std::string &key, const std::vector<std::string> &values);

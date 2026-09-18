@@ -59,6 +59,7 @@ static void printUsage(const char *programName)
         "                                           RST, SYN, FIN\n"
         "                        minsize=<size>     Packet size >= <size> bytes\n"
         "                        maxsize=<size>     Packet size <= <size> bytes\n"
+        "                        contains=<text>    Payload contains <text> (e.g. \"GET /\")\n"
         "                      Examples:\n"
         "                        --filter proto=tcp\n"
         "                        -f sport=80\n"
