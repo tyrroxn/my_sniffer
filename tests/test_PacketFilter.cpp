@@ -6,6 +6,7 @@
 */
 
 #include <criterion/criterion.h>
+#include <ctime>
 #include "PacketFilter.hpp"
 
 using namespace sniffer;
@@ -356,4 +357,57 @@ Test(PacketFilter_combined, proto_and_dport_and)
     cr_assert(filter.matches(makeEthernet(), makeIpv4(6), 66, makeTcp(51000, 443)));
     cr_assert_not(filter.matches(makeEthernet(), makeIpv4(17), 66, std::nullopt, makeUdp(51000, 443)));
     cr_assert_not(filter.matches(makeEthernet(), makeIpv4(6), 66, makeTcp(51000, 80)));
+}
+
+// ===== contains =====
+
+Test(PacketFilter_contains, matches_substring_in_tcp_payload)
+{
+    PacketFilter filter;
+    TcpHeader withGet{};
+    withGet.payload = {'G', 'E', 'T', ' ', '/', 'i', 'n', 'd', 'e', 'x'};
+    TcpHeader withoutGet{};
+    withoutGet.payload = {'P', 'O', 'S', 'T', ' ', '/', 'a', 'p', 'i'};
+
+    cr_assert(filter.parse("contains=GET /"));
+    cr_assert(filter.matches(makeEthernet(), makeIpv4(6), 66, withGet));
+    cr_assert_not(filter.matches(makeEthernet(), makeIpv4(6), 66, withoutGet));
+}
+
+Test(PacketFilter_contains, matches_substring_in_udp_payload)
+{
+    PacketFilter filter;
+    UdpHeader payload{};
+    payload.payload = {'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm'};
+
+    cr_assert(filter.parse("contains=example.com"));
+    cr_assert(filter.matches(makeEthernet(), makeIpv4(17), 66, std::nullopt, payload));
+}
+
+Test(PacketFilter_contains, slash_in_text_is_literal_not_split)
+{
+    PacketFilter filter;
+    TcpHeader exactMatch{};
+    exactMatch.payload = {'A', '/', 'B'};
+    TcpHeader partialOnly{};
+    partialOnly.payload = {'A'};
+
+    cr_assert(filter.parse("contains=A/B"));
+    cr_assert(filter.matches(makeEthernet(), makeIpv4(6), 66, exactMatch));
+    cr_assert_not(filter.matches(makeEthernet(), makeIpv4(6), 66, partialOnly));
+}
+
+Test(PacketFilter_contains, no_payload_fails)
+{
+    PacketFilter filter;
+
+    cr_assert(filter.parse("contains=GET"));
+    cr_assert_not(filter.matches(makeEthernet(0x0806), std::nullopt, 60));
+}
+
+Test(PacketFilter_contains, empty_value_rejected)
+{
+    PacketFilter filter;
+
+    cr_assert_not(filter.parse("contains="));
 }
