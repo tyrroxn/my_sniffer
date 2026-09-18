@@ -25,7 +25,7 @@ bool PacketFilter::isKnownKey(const std::string &key) const
 {
     if (key == "proto" || key == "sport" || key == "dport" ||
         key == "port" || key == "src" || key == "dst" || key == "ipv4" ||
-        key == "tcpflags")
+        key == "tcpflags" || key == "minsize" || key == "maxsize")
         return true;
     return false;
 }
@@ -64,6 +64,22 @@ bool PacketFilter::isValidIpv4Address(const std::string &address) const
     return dots == 3 && num >= 0 && num <= 255;
 }
 
+bool PacketFilter::isValidSize(const std::string &value) const
+{
+    if (value.empty())
+        return false;
+    for (char c : value) {
+        if (!std::isdigit(static_cast<unsigned char>(c)))
+            return false;
+    }
+    try {
+        std::stoul(value);
+        return true;
+    } catch (const std::out_of_range &) {
+        return false;
+    }
+}
+
 bool PacketFilter::isValidTcpFlag(const std::string &flag) const
 {
     for (const auto &validFlag : validFlags) {
@@ -83,6 +99,8 @@ bool PacketFilter::isValueValidForKey(const std::string &key, const std::string 
         return isValidIpv4Address(value);
     if (key == "tcpflags")
         return isValidTcpFlag(value);
+    if (key == "minsize" || key == "maxsize")
+        return isValidSize(value);
     return false;
 }
 
@@ -157,6 +175,13 @@ bool PacketFilter::parse(const std::string &expr)
     }
 
     std::vector<std::string> values = splitValues(rawValues);
+
+    if ((key == "minsize" || key == "maxsize") && values.size() > 1) {
+        std::cerr << "Invalid filter '" << expr << "': " << key
+            << " takes a single value, combining with '/' is not supported" << std::endl;
+        return false;
+    }
+
     if (!validateValues(key, values))
         return false;
 
@@ -213,8 +238,24 @@ bool PacketFilter::matchesTcpFlags(const std::vector<std::string> &flags, const 
     return false;
 }
 
+bool PacketFilter::matchesSize(const std::string &key, std::size_t packetSize, bool isMinimum) const
+{
+    auto it = filters.find(key);
+    if (it == filters.end())
+        return true;
+
+    for (const auto &value : it->second) {
+        std::size_t bound = std::stoul(value);
+        if (isMinimum && packetSize < bound)
+            return false;
+        if (!isMinimum && packetSize > bound)
+            return false;
+    }
+    return true;
+}
+
 bool PacketFilter::matches(const EthernetHeader &ethernet, const std::optional<Ipv4Header> &ipv4,
-    const std::optional<TcpHeader> &tcp, const std::optional<UdpHeader> &udp) const
+    std::size_t packetSize, const std::optional<TcpHeader> &tcp, const std::optional<UdpHeader> &udp) const
 {
     std::string protocol = classifyProtocol(ethernet, ipv4);
     if (!matchesProtocol("proto", protocol))
@@ -268,6 +309,10 @@ bool PacketFilter::matches(const EthernetHeader &ethernet, const std::optional<I
         if (!matchesTcpFlags(flags, *tcp))
             return false;
     }
+    if (!matchesSize("minsize", packetSize, true))
+        return false;
+    if (!matchesSize("maxsize", packetSize, false))
+        return false;
 
     return true;
 }

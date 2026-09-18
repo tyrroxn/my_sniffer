@@ -46,11 +46,25 @@ static void printUsage(const char *programName)
         "  --log               Write logs to disk at the default path (my_sniffer.log)\n"
         "  --log=<path>        Write logs to disk at <path>\n"
         "  --log <path>        Same as --log=<path>\n"
-        "  -f, --filter <expr> Only show/log packets matching <expr>\n"
-        "                      proto=tcp|udp|arp|ipv6|unknown\n"
-        "                      sport=<port>, dport=<port>, port=<port>\n"
-        "                      src=<ip>, dst=<ip> ipv4=<ip>\n"
-        "                      combine with '/' (e.g. proto=tcp/udp), or repeat -f\n\n"
+        "  -f, --filter <expr> Filter packets to display and log\n"
+        "                      Available filters:\n"
+        "                        proto=<type>       tcp, udp, arp, ipv6, unknown\n"
+        "                        sport=<port>       Source port\n"
+        "                        dport=<port>       Destination port\n"
+        "                        port=<port>        Source or destination port\n"
+        "                        src=<ip>           Source IPv4 address\n"
+        "                        dst=<ip>           Destination IPv4 address\n"
+        "                        ipv4=<ip>          Any matching IPv4 address\n"
+        "                        tcpflags=<flags>   NS, CWR, ECE, URG, ACK, PSH,\n"
+        "                                           RST, SYN, FIN\n"
+        "                        minsize=<size>     Packet size >= <size> bytes\n"
+        "                        maxsize=<size>     Packet size <= <size> bytes\n"
+        "                      Examples:\n"
+        "                        --filter proto=tcp\n"
+        "                        -f sport=80\n"
+        "                        -f src=192.168.1.1\n"
+        "                        -f tcpflags=SYN/ACK\n"
+        "                      Combine values with '/' or repeat -f.\n\n"
         "Runtime keys (while capturing):\n"
         "  p                   Pause/resume the live display\n"
         "  d                   Toggle minimum/detailed display\n"
@@ -169,7 +183,7 @@ static void processPacket(const RawPacket &packet, PacketDisplay &display, bool 
     if (ethernetHeader.etherType == static_cast<std::uint16_t>(EthernetType::IPv4))
         parseIpv4Layer(packet, ethernetHeader, ipv4Header, tcpHeader, udpHeader, errorCount);
 
-    if (!filter.matches(ethernetHeader, ipv4Header, tcpHeader, udpHeader)) {
+    if (!filter.matches(ethernetHeader, ipv4Header, packet.buffer.size(), tcpHeader, udpHeader)) {
         filteredCount++;
         return;
     }
