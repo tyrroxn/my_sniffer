@@ -49,6 +49,7 @@ static void printUsage(const char *programName)
         "  -f, --filter <expr> Only show/log packets matching <expr>\n"
         "                      proto=tcp|udp|arp|ipv6|unknown\n"
         "                      sport=<port>, dport=<port>, port=<port>\n"
+        "                      src=<ip>, dst=<ip> ipv4=<ip>\n"
         "                      combine with '/' (e.g. proto=tcp/udp), or repeat -f\n\n"
         "Runtime keys (while capturing):\n"
         "  p                   Pause/resume the live display\n"

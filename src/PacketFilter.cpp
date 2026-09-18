@@ -12,23 +12,24 @@
 
 using namespace sniffer;
 
-static const char *VALID_PROTOCOLS[] = {"tcp", "udp", "arp", "ipv6", "unknown"};
-
-static bool isValidProtocol(const std::string &value)
+bool PacketFilter::isValidProtocol(const std::string &value) const
 {
-    for (const char *proto : VALID_PROTOCOLS) {
+    for (const auto &proto : validProtocols) {
         if (value == proto)
             return true;
     }
     return false;
 }
 
-static bool isKnownKey(const std::string &key)
+bool PacketFilter::isKnownKey(const std::string &key) const
 {
-    return key == "proto" || key == "sport" || key == "dport" || key == "port";
+    if (key == "proto" || key == "sport" || key == "dport" ||
+        key == "port" || key == "src" || key == "dst" || key == "ipv4")
+        return true;
+    return false;
 }
 
-static bool isValidPort(const std::string &value)
+bool PacketFilter::isValidPort(const std::string &value) const
 {
     if (value.empty())
         return false;
@@ -43,12 +44,33 @@ static bool isValidPort(const std::string &value)
     }
 }
 
-static bool isValueValidForKey(const std::string &key, const std::string &value)
+bool PacketFilter::isValidIpv4Address(const std::string &address) const
+{
+    int dots = 0;
+    int num = 0;
+    for (char c : address) {
+        if (c == '.') {
+            if (num < 0 || num > 255)
+                return false;
+            dots++;
+            num = 0;
+        } else if (std::isdigit(static_cast<unsigned char>(c))) {
+            num = num * 10 + (c - '0');
+        } else {
+            return false;
+        }
+    }
+    return dots == 3 && num >= 0 && num <= 255;
+}
+
+bool PacketFilter::isValueValidForKey(const std::string &key, const std::string &value) const
 {
     if (key == "proto")
         return isValidProtocol(value);
     if (key == "sport" || key == "dport" || key == "port")
         return isValidPort(value);
+    if (key == "src" || key == "dst" || key == "ipv4")
+        return isValidIpv4Address(value);
     return false;
 }
 
@@ -68,7 +90,7 @@ std::string PacketFilter::classifyProtocol(const EthernetHeader &ethernet,
     return "unknown";
 }
 
-static std::vector<std::string> splitOrValues(const std::string &rawValues)
+ std::vector<std::string> PacketFilter::splitValues(const std::string &rawValues)
 {
     std::vector<std::string> values;
     std::size_t start = 0;
@@ -83,7 +105,7 @@ static std::vector<std::string> splitOrValues(const std::string &rawValues)
     return values;
 }
 
-static bool validateValues(const std::string &key, const std::vector<std::string> &values)
+bool PacketFilter::validateValues(const std::string &key, const std::vector<std::string> &values) const
 {
     for (const auto &value : values) {
         if (!isValueValidForKey(key, value)) {
@@ -122,7 +144,7 @@ bool PacketFilter::parse(const std::string &expr)
         return false;
     }
 
-    std::vector<std::string> values = splitOrValues(rawValues);
+    std::vector<std::string> values = splitValues(rawValues);
     if (!validateValues(key, values))
         return false;
 
@@ -144,6 +166,14 @@ bool PacketFilter::matchesPort(const std::string &key, std::uint16_t port) const
     if (it == filters.end())
         return true;
     return std::find(it->second.begin(), it->second.end(), std::to_string(port)) != it->second.end();
+}
+
+bool PacketFilter::matchesIpv4Address(const std::string &key, const std::string &address) const
+{
+    auto it = filters.find(key);
+    if (it == filters.end())
+        return true;
+    return std::find(it->second.begin(), it->second.end(), address) != it->second.end();
 }
 
 bool PacketFilter::matches(const EthernetHeader &ethernet, const std::optional<Ipv4Header> &ipv4,
@@ -173,6 +203,25 @@ bool PacketFilter::matches(const EthernetHeader &ethernet, const std::optional<I
         std::uint16_t sport = tcp ? tcp->sourcePort : udp->sourcePort;
         std::uint16_t dport = tcp ? tcp->destinationPort : udp->destinationPort;
         if (!matchesPort("port", sport) && !matchesPort("port", dport))
+            return false;
+    }
+    if (filters.count("src")) {
+        if (!ipv4)
+            return false;
+        if (!matchesIpv4Address("src", ipv4->sourceAddress))
+            return false;
+    }
+    if (filters.count("dst")) {
+        if (!ipv4)
+            return false;
+        if (!matchesIpv4Address("dst", ipv4->destinationAddress))
+            return false;
+    }
+    if (filters.count("ipv4")) {
+        if (!ipv4)
+            return false;
+        if (!matchesIpv4Address("ipv4", ipv4->sourceAddress) &&
+            !matchesIpv4Address("ipv4", ipv4->destinationAddress))
             return false;
     }
 
