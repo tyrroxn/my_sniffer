@@ -31,10 +31,12 @@ class PacketFilter {
 
     private:
         std::vector<std::string> validProtocols = {"tcp", "udp", "arp", "ipv6", "unknown"};
+        std::vector<std::string> validFlags = {"NS", "CWR", "ECE", "URG", "ACK", "PSH", "RST", "SYN", "FIN"};
         std::map<std::string, std::vector<std::string>> filters;
         bool matchesPort(const std::string &key, std::uint16_t port) const;
         bool matchesProtocol(const std::string &key, const std::string &value) const;
         bool matchesIpv4Address(const std::string &key, const std::string &address) const;
+        bool matchesTcpFlags(const std::vector<std::string> &flags, const TcpHeader &tcp) const;
         static std::string classifyProtocol(const EthernetHeader &ethernet,
             const std::optional<Ipv4Header> &ipv4);
         void addValues(const std::string &key, const std::vector<std::string> &values);
@@ -43,6 +45,7 @@ class PacketFilter {
         bool isValidPort(const std::string &value) const;
         bool isValidIpv4Address(const std::string &address) const;
         bool isValueValidForKey(const std::string &key, const std::string &value) const;
+        bool isValidTcpFlag(const std::string &flag) const;
         bool validateValues(const std::string &key, const std::vector<std::string> &values) const;
         std::vector<std::string> splitValues(const std::string &rawValues);
 };

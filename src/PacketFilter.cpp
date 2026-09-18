@@ -24,7 +24,8 @@ bool PacketFilter::isValidProtocol(const std::string &value) const
 bool PacketFilter::isKnownKey(const std::string &key) const
 {
     if (key == "proto" || key == "sport" || key == "dport" ||
-        key == "port" || key == "src" || key == "dst" || key == "ipv4")
+        key == "port" || key == "src" || key == "dst" || key == "ipv4" ||
+        key == "tcpflags")
         return true;
     return false;
 }
@@ -63,6 +64,15 @@ bool PacketFilter::isValidIpv4Address(const std::string &address) const
     return dots == 3 && num >= 0 && num <= 255;
 }
 
+bool PacketFilter::isValidTcpFlag(const std::string &flag) const
+{
+    for (const auto &validFlag : validFlags) {
+        if (flag == validFlag)
+            return true;
+    }
+    return false;
+}
+
 bool PacketFilter::isValueValidForKey(const std::string &key, const std::string &value) const
 {
     if (key == "proto")
@@ -71,6 +81,8 @@ bool PacketFilter::isValueValidForKey(const std::string &key, const std::string 
         return isValidPort(value);
     if (key == "src" || key == "dst" || key == "ipv4")
         return isValidIpv4Address(value);
+    if (key == "tcpflags")
+        return isValidTcpFlag(value);
     return false;
 }
 
@@ -176,6 +188,31 @@ bool PacketFilter::matchesIpv4Address(const std::string &key, const std::string 
     return std::find(it->second.begin(), it->second.end(), address) != it->second.end();
 }
 
+bool PacketFilter::matchesTcpFlags(const std::vector<std::string> &flags, const TcpHeader &tcp) const
+{
+    for (const auto &flag : flags) {
+        if (flag == "NS" && tcp.NS_flag)
+            return true;
+        if (flag == "CWR" && tcp.CWR_flag)
+            return true;
+        if (flag == "ECE" && tcp.ECE_flag)
+            return true;
+        if (flag == "URG" && tcp.URG_flag)
+            return true;
+        if (flag == "ACK" && tcp.ACK_flag)
+            return true;
+        if (flag == "PSH" && tcp.PSH_flag)
+            return true;
+        if (flag == "RST" && tcp.RST_flag)
+            return true;
+        if (flag == "SYN" && tcp.SYN_flag)
+            return true;
+        if (flag == "FIN" && tcp.FIN_flag)
+            return true;
+    }
+    return false;
+}
+
 bool PacketFilter::matches(const EthernetHeader &ethernet, const std::optional<Ipv4Header> &ipv4,
     const std::optional<TcpHeader> &tcp, const std::optional<UdpHeader> &udp) const
 {
@@ -222,6 +259,13 @@ bool PacketFilter::matches(const EthernetHeader &ethernet, const std::optional<I
             return false;
         if (!matchesIpv4Address("ipv4", ipv4->sourceAddress) &&
             !matchesIpv4Address("ipv4", ipv4->destinationAddress))
+            return false;
+    }
+    if (filters.count("tcpflags")) {
+        if (!tcp)
+            return false;
+        const std::vector<std::string> &flags = filters.at("tcpflags");
+        if (!matchesTcpFlags(flags, *tcp))
             return false;
     }
 
