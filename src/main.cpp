@@ -59,12 +59,14 @@ static void printUsage(const char *programName)
         "                                           RST, SYN, FIN\n"
         "                        minsize=<size>     Packet size >= <size> bytes\n"
         "                        maxsize=<size>     Packet size <= <size> bytes\n"
+        "                        contains=<text>    Payload contains <text> (e.g. \"GET /\")\n"
         "                      Examples:\n"
         "                        --filter proto=tcp\n"
         "                        -f sport=80\n"
         "                        -f src=192.168.1.1\n"
         "                        -f tcpflags=SYN/ACK\n"
-        "                      Combine values with '/' or repeat -f.\n\n"
+        "                        -f proto=tcp minsize=50   (same -f)\n"
+        "                        -f proto=tcp -f dport=443 (repeated -f)\n\n"
         "Runtime keys (while capturing):\n"
         "  p                   Pause/resume the live display\n"
         "  d                   Toggle minimum/detailed display\n"
@@ -98,12 +100,14 @@ static int parseArgs(int argc, char **argv, bool &logActive, std::string &logPat
             if (!filter.parse(arg.substr(9)))
                 return 2;
         } else if (arg == "-f" || arg == "--filter") {
-            if (i + 1 >= argc) {
+            if (i + 1 >= argc || argv[i + 1][0] == '-') {
                 std::cerr << "Missing value for " << arg << std::endl;
                 return 2;
             }
-            if (!filter.parse(argv[++i]))
-                return 2;
+            while (i + 1 < argc && argv[i + 1][0] != '-') {
+                if (!filter.parse(argv[++i]))
+                    return 2;
+            }
         } else {
             std::cerr << "Unknown argument: " << arg << std::endl;
             return 2;

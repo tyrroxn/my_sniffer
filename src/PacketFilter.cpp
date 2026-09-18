@@ -25,7 +25,8 @@ bool PacketFilter::isKnownKey(const std::string &key) const
 {
     if (key == "proto" || key == "sport" || key == "dport" ||
         key == "port" || key == "src" || key == "dst" || key == "ipv4" ||
-        key == "tcpflags" || key == "minsize" || key == "maxsize")
+        key == "tcpflags" || key == "minsize" || key == "maxsize" ||
+        key == "contains")
         return true;
     return false;
 }
@@ -101,6 +102,8 @@ bool PacketFilter::isValueValidForKey(const std::string &key, const std::string 
         return isValidTcpFlag(value);
     if (key == "minsize" || key == "maxsize")
         return isValidSize(value);
+    if (key == "contains")
+        return !value.empty();
     return false;
 }
 
@@ -170,16 +173,22 @@ bool PacketFilter::parse(const std::string &expr)
     std::string rawValues = expr.substr(eq + 1);
 
     if (!isKnownKey(key)) {
-        std::cerr << "Invalid filter key '" << key << "': expected proto, sport, dport or port" << std::endl;
+        std::cerr << "Invalid filter key '" << key << "': expected proto, sport, dport or port or src or dst or ipv4 or tcpflags or minsize or maxsize or contains" << std::endl;
         return false;
     }
 
-    std::vector<std::string> values = splitValues(rawValues);
+    std::vector<std::string> values;
 
-    if ((key == "minsize" || key == "maxsize") && values.size() > 1) {
-        std::cerr << "Invalid filter '" << expr << "': " << key
-            << " takes a single value, combining with '/' is not supported" << std::endl;
-        return false;
+    if (key == "contains") {
+        values.push_back(rawValues);
+    } else {
+        values = splitValues(rawValues);
+
+        if ((key == "minsize" || key == "maxsize") && values.size() > 1) {
+            std::cerr << "Invalid filter '" << expr << "': " << key
+                << " takes a single value, combining with '/' is not supported" << std::endl;
+            return false;
+        }
     }
 
     if (!validateValues(key, values))
@@ -254,6 +263,20 @@ bool PacketFilter::matchesSize(const std::string &key, std::size_t packetSize, b
     return true;
 }
 
+bool PacketFilter::matchesContains(const std::vector<std::uint8_t> &payload) const
+{
+    auto it = filters.find("contains");
+    if (it == filters.end())
+        return true;
+
+    std::string payloadText(payload.begin(), payload.end());
+    for (const auto &needle : it->second) {
+        if (payloadText.find(needle) != std::string::npos)
+            return true;
+    }
+    return false;
+}
+
 bool PacketFilter::matches(const EthernetHeader &ethernet, const std::optional<Ipv4Header> &ipv4,
     std::size_t packetSize, const std::optional<TcpHeader> &tcp, const std::optional<UdpHeader> &udp) const
 {
@@ -313,6 +336,18 @@ bool PacketFilter::matches(const EthernetHeader &ethernet, const std::optional<I
         return false;
     if (!matchesSize("maxsize", packetSize, false))
         return false;
+
+    if (filters.count("contains")) {
+        const std::vector<std::uint8_t> *payload = nullptr;
+        if (tcp)
+            payload = &tcp->payload;
+        else if (udp)
+            payload = &udp->payload;
+        if (!payload)
+            return false;
+        if (!matchesContains(*payload))
+            return false;
+    }
 
     return true;
 }
