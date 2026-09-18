@@ -173,7 +173,7 @@ bool PacketFilter::parse(const std::string &expr)
     std::string rawValues = expr.substr(eq + 1);
 
     if (!isKnownKey(key)) {
-        std::cerr << "Invalid filter key '" << key << "': expected proto, sport, dport or port" << std::endl;
+        std::cerr << "Invalid filter key '" << key << "': expected proto, sport, dport or port or src or dst or ipv4 or tcpflags or minsize or maxsize or contains" << std::endl;
         return false;
     }
 
