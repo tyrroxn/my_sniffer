@@ -11,6 +11,7 @@
 #include "TcpParser.hpp"
 #include "UdpParser.hpp"
 #include "PacketDisplay.hpp"
+#include "PacketFilter.hpp"
 #include "TerminalInput.hpp"
 #include "Logger.hpp"
 #include <memory>
@@ -44,7 +45,11 @@ static void printUsage(const char *programName)
         "  -d, --detailed      Write logs in detailed mode and display detailed information (default: minimum)\n"
         "  --log               Write logs to disk at the default path (my_sniffer.log)\n"
         "  --log=<path>        Write logs to disk at <path>\n"
-        "  --log <path>        Same as --log=<path>\n\n"
+        "  --log <path>        Same as --log=<path>\n"
+        "  -f, --filter <expr> Only show/log packets matching <expr>\n"
+        "                      proto=tcp|udp|arp|ipv6|unknown\n"
+        "                      sport=<port>, dport=<port>, port=<port>\n"
+        "                      combine with '/' (e.g. proto=tcp/udp), or repeat -f\n\n"
         "Runtime keys (while capturing):\n"
         "  p                   Pause/resume the live display\n"
         "  d                   Toggle minimum/detailed display\n"
@@ -52,7 +57,8 @@ static void printUsage(const char *programName)
     return;
 }
 
-static int parseArgs(int argc, char **argv, bool &logActive, std::string &logPath, bool &detailed)
+static int parseArgs(int argc, char **argv, bool &logActive, std::string &logPath, bool &detailed,
+    PacketFilter &filter)
 {
     logActive = false;
     logPath = "my_sniffer.log";
@@ -73,6 +79,20 @@ static int parseArgs(int argc, char **argv, bool &logActive, std::string &logPat
                 logPath = argv[++i];
         } else if (arg == "-d" || arg == "--detailed")
             detailed = true;
+        else if (arg.rfind("--filter=", 0) == 0) {
+            if (!filter.parse(arg.substr(9)))
+                return 2;
+        } else if (arg == "-f" || arg == "--filter") {
+            if (i + 1 >= argc) {
+                std::cerr << "Missing value for " << arg << std::endl;
+                return 2;
+            }
+            if (!filter.parse(argv[++i]))
+                return 2;
+        } else {
+            std::cerr << "Unknown argument: " << arg << std::endl;
+            return 2;
+        }
     }
     return 0;
 }
@@ -131,7 +151,8 @@ static void parseIpv4Layer(const RawPacket &packet, const EthernetHeader &ethern
     return;
 }
 
-static void processPacket(const RawPacket &packet, PacketDisplay &display, bool detailed, std::size_t &errorCount)
+static void processPacket(const RawPacket &packet, PacketDisplay &display, bool detailed,
+    const PacketFilter &filter, std::size_t &errorCount, std::size_t &filteredCount)
 {
     EthernetHeader ethernetHeader;
     std::optional<Ipv4Header> ipv4Header;
@@ -147,13 +168,19 @@ static void processPacket(const RawPacket &packet, PacketDisplay &display, bool 
     if (ethernetHeader.etherType == static_cast<std::uint16_t>(EthernetType::IPv4))
         parseIpv4Layer(packet, ethernetHeader, ipv4Header, tcpHeader, udpHeader, errorCount);
 
+    if (!filter.matches(ethernetHeader, ipv4Header, tcpHeader, udpHeader)) {
+        filteredCount++;
+        return;
+    }
+
     Logger::debug(Logger::writeLog(packet, ethernetHeader, ipv4Header, tcpHeader, udpHeader, detailed));
     display.show(packet, ethernetHeader, ipv4Header, tcpHeader, udpHeader);
     return;
 }
 
 static void runCaptureLoop(CaptureNetwork &capture, TerminalInput &input, PacketDisplay &display,
-    bool detailed, std::size_t &packetCount, std::size_t &errorCount)
+    bool detailed, const PacketFilter &filter, std::size_t &packetCount, std::size_t &errorCount,
+    std::size_t &filteredCount)
 {
     while (SignalHandler::running()) {
         handleKey(input.pollKey(), display);
@@ -167,7 +194,7 @@ static void runCaptureLoop(CaptureNetwork &capture, TerminalInput &input, Packet
             continue;
         }
         packetCount++;
-        processPacket(packet, display, detailed, errorCount);
+        processPacket(packet, display, detailed, filter, errorCount, filteredCount);
     }
     return;
 }
@@ -177,11 +204,16 @@ int main(int argc, char **argv)
     bool logActive;
     std::string logPath;
     bool detailed;
+    PacketFilter filter;
     std::size_t packetCount = 0;
     std::size_t errorCount = 0;
+    std::size_t filteredCount = 0;
 
-    if (parseArgs(argc, argv, logActive, logPath, detailed) == 1)
+    int result = parseArgs(argc, argv, logActive, logPath, detailed, filter);
+    if (result == 1)
         return 0;
+    if (result == 2)
+        return 1;
     Logger::init(logActive, logPath);
 
     SignalHandler::install();
@@ -196,11 +228,12 @@ int main(int argc, char **argv)
     std::cout << "Press 'p' to pause/resume display, 'd' to switch to detailed mode, "
         "Ctrl+C to stop." << std::endl;
 
-    runCaptureLoop(*capture, input, display, detailed, packetCount, errorCount);
+    runCaptureLoop(*capture, input, display, detailed, filter, packetCount, errorCount, filteredCount);
 
     capture->stop();
     Logger::info("Capture stopped: " + std::to_string(packetCount) + " packet(s) captured, "
+        + std::to_string(filteredCount) + " filtered, "
         + std::to_string(errorCount) + " error(s)\n");
-    display.displayStats(packetCount, errorCount);
+    display.displayStats(packetCount, filteredCount, errorCount);
     return 0;
 }

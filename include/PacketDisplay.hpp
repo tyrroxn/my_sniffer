@@ -31,7 +31,7 @@ class PacketDisplay {
 
         void show(const RawPacket &packet, const EthernetHeader &ethernet, const std::optional<Ipv4Header> &ipv4 = std::nullopt,
             const std::optional<TcpHeader> &tcp = std::nullopt, const std::optional<UdpHeader> &udp = std::nullopt);
-        void displayStats(std::size_t captured, std::size_t errors) const;
+        void displayStats(std::size_t captured, std::size_t filtered, std::size_t errors) const;
 
     private:
         Mode mode = Mode::Minimum;
