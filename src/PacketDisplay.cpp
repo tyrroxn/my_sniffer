@@ -127,10 +127,11 @@ void PacketDisplay::showDetailed(const RawPacket &packet, const EthernetHeader &
     return;
 }
 
-void PacketDisplay::displayStats(std::size_t captured, std::size_t errors) const
+void PacketDisplay::displayStats(std::size_t captured, std::size_t filtered, std::size_t errors) const
 {
     std::cout << "\nCapture stopped.\n"
         << "  packets captured: " << captured << "\n"
+        << "  packets filtered: " << filtered << "\n"
         << "  errors: " << errors << std::endl;
     std::cout.flush();
     return;
