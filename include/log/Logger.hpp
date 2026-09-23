@@ -30,7 +30,7 @@ static constexpr std::size_t MAX_LOG_FILES = 3;
 
 class Logger {
     public:
-        static void init(bool active, const std::string &logFilePath);
+        static std::string init(bool active, const std::string &logFilePath);
         static void debug(const std::string &message);
         static void info(const std::string &message);
         static void warn(const std::string &message);
