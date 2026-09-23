@@ -8,7 +8,7 @@
 #ifndef ETHERNETPARSER_HPP_
 #define ETHERNETPARSER_HPP_
 
-#include "Packet.hpp"
+#include "utils/Packet.hpp"
 static constexpr std::uint16_t VLAN_TAG = 0x8100;
 static constexpr std::size_t VLAN_TAG_LEN = 4;
 

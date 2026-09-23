@@ -7,7 +7,7 @@
 
 #ifndef CAPTURENETWORK_HPP_
 #define CAPTURENETWORK_HPP_
-#include "Packet.hpp"
+#include "utils/Packet.hpp"
 
 namespace sniffer {
 

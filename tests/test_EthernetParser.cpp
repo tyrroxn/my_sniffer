@@ -6,7 +6,7 @@
 */
 
 #include <criterion/criterion.h>
-#include "EthernetParser.hpp"
+#include "parsers/EthernetParser.hpp"
 #include <cstdlib>
 
 using sniffer::EthernetParser;

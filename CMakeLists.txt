@@ -47,25 +47,25 @@ endif()
 
 # ===== SOURCES =====
 if (APPLE)
-    set(PLATFORM_CAPTURE_SOURCE ${PROJECT_SOURCE_DIR}/src/MacCapture.cpp)
+    set(PLATFORM_CAPTURE_SOURCE ${PROJECT_SOURCE_DIR}/src/capture/MacCapture.cpp)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(PLATFORM_CAPTURE_SOURCE ${PROJECT_SOURCE_DIR}/src/LinuxCapture.cpp)
+    set(PLATFORM_CAPTURE_SOURCE ${PROJECT_SOURCE_DIR}/src/capture/LinuxCapture.cpp)
 else()
     message(FATAL_ERROR "No capture backend implemented for this platform")
 endif()
 
 add_executable(${OUTPUT_NAME}
     ${PROJECT_SOURCE_DIR}/src/main.cpp
-    ${PROJECT_SOURCE_DIR}/src/Helper.cpp
-    ${PROJECT_SOURCE_DIR}/src/SignalHandler.cpp
-    ${PROJECT_SOURCE_DIR}/src/EthernetParser.cpp
-    ${PROJECT_SOURCE_DIR}/src/Ipv4Parser.cpp
-    ${PROJECT_SOURCE_DIR}/src/TcpParser.cpp
-    ${PROJECT_SOURCE_DIR}/src/UdpParser.cpp
-    ${PROJECT_SOURCE_DIR}/src/PacketDisplay.cpp
-    ${PROJECT_SOURCE_DIR}/src/PacketFilter.cpp
-    ${PROJECT_SOURCE_DIR}/src/TerminalInput.cpp
-    ${PROJECT_SOURCE_DIR}/src/Logger.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/Helper.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/SignalHandler.cpp
+    ${PROJECT_SOURCE_DIR}/src/parsers/EthernetParser.cpp
+    ${PROJECT_SOURCE_DIR}/src/parsers/Ipv4Parser.cpp
+    ${PROJECT_SOURCE_DIR}/src/parsers/TcpParser.cpp
+    ${PROJECT_SOURCE_DIR}/src/parsers/UdpParser.cpp
+    ${PROJECT_SOURCE_DIR}/src/cli/PacketDisplay.cpp
+    ${PROJECT_SOURCE_DIR}/src/cli/PacketFilter.cpp
+    ${PROJECT_SOURCE_DIR}/src/cli/TerminalInput.cpp
+    ${PROJECT_SOURCE_DIR}/src/log/Logger.cpp
     ${PLATFORM_CAPTURE_SOURCE}
 )
 
@@ -94,13 +94,13 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/tests/test_UdpParser.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_Logger.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_PacketFilter.cpp
-        ${PROJECT_SOURCE_DIR}/src/Helper.cpp
-        ${PROJECT_SOURCE_DIR}/src/EthernetParser.cpp
-        ${PROJECT_SOURCE_DIR}/src/Ipv4Parser.cpp
-        ${PROJECT_SOURCE_DIR}/src/TcpParser.cpp
-        ${PROJECT_SOURCE_DIR}/src/UdpParser.cpp
-        ${PROJECT_SOURCE_DIR}/src/Logger.cpp
-        ${PROJECT_SOURCE_DIR}/src/PacketFilter.cpp
+        ${PROJECT_SOURCE_DIR}/src/utils/Helper.cpp
+        ${PROJECT_SOURCE_DIR}/src/parsers/EthernetParser.cpp
+        ${PROJECT_SOURCE_DIR}/src/parsers/Ipv4Parser.cpp
+        ${PROJECT_SOURCE_DIR}/src/parsers/TcpParser.cpp
+        ${PROJECT_SOURCE_DIR}/src/parsers/UdpParser.cpp
+        ${PROJECT_SOURCE_DIR}/src/log/Logger.cpp
+        ${PROJECT_SOURCE_DIR}/src/cli/PacketFilter.cpp
     )
 
     target_include_directories(unit_tests PUBLIC
@@ -110,12 +110,29 @@ if (CRITERION_FOUND)
     target_link_libraries(unit_tests PRIVATE ${CRITERION_LIBRARIES} spdlog::spdlog)
     target_compile_options(unit_tests PRIVATE ${CRITERION_CFLAGS_OTHER})
 
+    target_compile_options(unit_tests PRIVATE --coverage -O0 -g)
+    target_link_options(unit_tests PRIVATE --coverage)
+
     add_test(NAME unit_tests COMMAND unit_tests)
 
     add_custom_target(run_tests
         COMMAND unit_tests
         DEPENDS unit_tests
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+
+    add_custom_target(coverage
+        COMMAND unit_tests
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage
+        COMMAND gcovr --root ${PROJECT_SOURCE_DIR}
+            --filter ${PROJECT_SOURCE_DIR}/src
+            --filter ${PROJECT_SOURCE_DIR}/include
+            --exclude '.*tests/.*'
+            --print-summary
+            --html-details ${CMAKE_BINARY_DIR}/coverage/index.html
+        DEPENDS unit_tests
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Running unit_tests and generating gcovr HTML coverage report"
     )
 else()
     message(STATUS "Criterion not found, skipping unit_tests target")

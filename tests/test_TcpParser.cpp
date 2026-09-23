@@ -8,7 +8,7 @@
 #include <criterion/criterion.h>
 #include <algorithm>
 #include <cstdlib>
-#include "TcpParser.hpp"
+#include "parsers/TcpParser.hpp"
 
 using sniffer::TcpParser;
 using sniffer::TcpHeader;

@@ -5,11 +5,11 @@
 ** PacketDisplay
 */
 
-#include "PacketDisplay.hpp"
-#include "EthernetParser.hpp"
-#include "Ipv4Parser.hpp"
-#include "TcpParser.hpp"
-#include "Helper.hpp"
+#include "cli/PacketDisplay.hpp"
+#include "parsers/EthernetParser.hpp"
+#include "parsers/Ipv4Parser.hpp"
+#include "parsers/TcpParser.hpp"
+#include "utils/Helper.hpp"
 
 #include <cstdio>
 #include <ctime>

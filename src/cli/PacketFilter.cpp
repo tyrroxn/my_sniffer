@@ -5,7 +5,7 @@
 ** PacketFilter
 */
 
-#include "PacketFilter.hpp"
+#include "cli/PacketFilter.hpp"
 #include <algorithm>
 #include <cctype>
 #include <iostream>

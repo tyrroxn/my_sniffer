@@ -5,8 +5,8 @@
 ** Ipv4Parser
 */
 
-#include "Ipv4Parser.hpp"
-#include "Helper.hpp"
+#include "parsers/Ipv4Parser.hpp"
+#include "utils/Helper.hpp"
 
 using namespace sniffer;
 

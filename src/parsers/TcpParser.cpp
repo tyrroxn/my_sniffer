@@ -5,8 +5,8 @@
 ** TcpParser
 */
 
-#include "TcpParser.hpp"
-#include "Helper.hpp"
+#include "parsers/TcpParser.hpp"
+#include "utils/Helper.hpp"
 
 using namespace sniffer;
 

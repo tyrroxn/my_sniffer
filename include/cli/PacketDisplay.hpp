@@ -8,7 +8,7 @@
 #ifndef PACKETDISPLAY_HPP_
 #define PACKETDISPLAY_HPP_
 
-#include "Packet.hpp"
+#include "utils/Packet.hpp"
 #include <optional>
 
 namespace sniffer {

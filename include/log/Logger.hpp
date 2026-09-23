@@ -8,11 +8,11 @@
 #ifndef LOGGER_HPP_
 #define LOGGER_HPP_
 
-#include "Packet.hpp"
-#include "Ipv4Parser.hpp"
-#include "TcpParser.hpp"
-#include "UdpParser.hpp"
-#include "Helper.hpp"
+#include "utils/Packet.hpp"
+#include "parsers/Ipv4Parser.hpp"
+#include "parsers/TcpParser.hpp"
+#include "parsers/UdpParser.hpp"
+#include "utils/Helper.hpp"
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <cstdio>

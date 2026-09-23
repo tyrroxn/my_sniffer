@@ -7,9 +7,9 @@
 
 #ifndef LINUXCAPTURE_HPP_
 #define LINUXCAPTURE_HPP_
-#include "CaptureNetwork.hpp"
-#include "Helper.hpp"
-#include "Packet.hpp"
+#include "capture/CaptureNetwork.hpp"
+#include "utils/Helper.hpp"
+#include "utils/Packet.hpp"
 #include <sys/socket.h>
 
 namespace sniffer {
