@@ -71,6 +71,23 @@ add_executable(${OUTPUT_NAME}
 
 target_link_libraries(${OUTPUT_NAME} PRIVATE spdlog::spdlog)
 
+set(ANALYSE_LOG_NAME analyse_log)
+
+add_executable(${ANALYSE_LOG_NAME}
+    ${PROJECT_SOURCE_DIR}/src/anlyse_log_main.cpp
+    ${PROJECT_SOURCE_DIR}/src/analysis/LogParser.cpp
+)
+
+target_include_directories(${ANALYSE_LOG_NAME} PUBLIC
+    ${PROJECT_SOURCE_DIR}/include
+)
+
+if(MSVC)
+    target_compile_options(${ANALYSE_LOG_NAME} PRIVATE /W4)
+else()
+    target_compile_options(${ANALYSE_LOG_NAME} PRIVATE -Wall -Wextra -Werror)
+endif()
+
 add_custom_target(re
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${OUTPUT_NAME}
@@ -94,6 +111,7 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/tests/test_UdpParser.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_Logger.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_PacketFilter.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_LogParser.cpp
         ${PROJECT_SOURCE_DIR}/src/utils/Helper.cpp
         ${PROJECT_SOURCE_DIR}/src/parsers/EthernetParser.cpp
         ${PROJECT_SOURCE_DIR}/src/parsers/Ipv4Parser.cpp
@@ -101,6 +119,7 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/src/parsers/UdpParser.cpp
         ${PROJECT_SOURCE_DIR}/src/log/Logger.cpp
         ${PROJECT_SOURCE_DIR}/src/cli/PacketFilter.cpp
+        ${PROJECT_SOURCE_DIR}/src/analysis/LogParser.cpp
     )
 
     target_include_directories(unit_tests PUBLIC
