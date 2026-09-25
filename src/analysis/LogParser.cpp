@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-namespace sniffer {
+using namespace analyser;
 
 std::optional<double> parseTimestamp(const std::string &text)
 {
@@ -201,6 +201,4 @@ std::optional<LogEntry> LogParser::nextEntry()
 {
     parse();
     return entry;
-}
-
 }

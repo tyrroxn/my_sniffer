@@ -14,7 +14,7 @@
 #include <optional>
 #include <string>
 
-namespace sniffer {
+namespace analyser {
 
 const std::string DETAILED_HEADER_START = "==== packet (";
 const std::string DETAILED_HEADER_END = " bytes) ====";
