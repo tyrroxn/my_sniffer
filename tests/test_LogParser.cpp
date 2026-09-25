@@ -10,7 +10,7 @@
 #include <ctime>
 #include <sstream>
 
-using namespace sniffer;
+using namespace analyser;
 
 static const std::string PREFIX = "[2026-09-25 10:21:00.305] [debug] ";
 static const std::string MACS = "94:bb:43:5e:d9:b3 -> 3c:37:12:de:ed:88  ";
