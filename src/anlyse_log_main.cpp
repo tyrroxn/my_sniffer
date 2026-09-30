@@ -6,6 +6,7 @@
 */
 
 #include "analysis/LogParser.hpp"
+#include "analysis/SpikeNetworkDetector.hpp"
 #include "analysis/SpikeServicesDetector.hpp"
 #include <cmath>
 #include <ctime>
@@ -25,6 +26,7 @@ static void printUsage(const char *programName)
     std::cout << "Usage: " << programName << " <log file>\n\n"
         "Analyses a my_sniffer log (minimum or detailed mode) and reports\n"
         "[SERVICE-SPIKE]: abnormal volume from one IP to one service (IP:port).\n"
+        "[NETWORK-SPIKE]: whole network traffic at least 3x its usual average.\n"
         "Rotated parts (<name>.1.log, <name>.2.log...) are read too, oldest first.\n";
     return;
 }
@@ -54,6 +56,23 @@ static void reportService(const SpikeAlert &alert)
         << " to " << formatTime(alert.timestampSeconds).substr(11) << " (" << duration.str() << "s)"
         << "  > limit " << SpikeServicesDetector::limit << " in " << SpikeServicesDetector::windowSeconds << "s";
     std::cout << "  => scan, brute-force or application DoS" << std::endl;
+    return;
+}
+
+static void reportNetwork(const NetworkSpikeAlert &alert)
+{
+    std::ostringstream duration;
+    std::ostringstream average;
+
+    duration << std::fixed << std::setprecision(1) << alert.timestampSeconds - alert.windowStartSeconds;
+    average << std::fixed << std::setprecision(1) << alert.averagePackets;
+    std::cout << "[" << formatTime(alert.timestampSeconds) << "] [NETWORK-SPIKE] "
+        << alert.packetCount << " packets (" << alert.byteCount << "B)"
+        << " from " << formatTime(alert.windowStartSeconds).substr(11)
+        << " to " << formatTime(alert.timestampSeconds).substr(11) << " (" << duration.str() << "s)"
+        << "  >= " << SpikeNetworkDetector::spikeFactor << "x usual " << average.str()
+        << " packets per " << SpikeNetworkDetector::windowSeconds << "s";
+    std::cout << "  => flood or DDoS on the network" << std::endl;
     return;
 }
 
@@ -99,9 +118,11 @@ int main(int argc, char **argv)
 
     std::vector<std::filesystem::path> parts = logParts(argv[1]);
     SpikeServicesDetector spikes;
+    SpikeNetworkDetector networkSpikes;
     std::size_t lines = 0;
     std::size_t packets = 0;
     std::size_t alerts = 0;
+    std::size_t networkAlerts = 0;
 
     for (const std::filesystem::path &part : parts) {
         std::ifstream file(part);
@@ -123,12 +144,19 @@ int main(int argc, char **argv)
                 alerts++;
                 reportService(*alert);
             }
+            std::optional<NetworkSpikeAlert> networkAlert = networkSpikes.addPacket(entry->timestampSeconds,
+                entry->sizeBytes);
+            if (networkAlert) {
+                networkAlerts++;
+                reportNetwork(*networkAlert);
+            }
         }
         lines += parser.getNbLines();
     }
 
     std::cout << "\n===== Summary =====\n"
         << parts.size() << " file(s), " << lines << " line(s) read, " << packets << " packet record(s)\n"
-        << "SERVICE-SPIKE: " << alerts << std::endl;
+        << "SERVICE-SPIKE: " << alerts << "\n"
+        << "NETWORK-SPIKE: " << networkAlerts << std::endl;
     return 0;
 }

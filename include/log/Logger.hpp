@@ -25,7 +25,7 @@ class logger;
 
 namespace sniffer {
 
-static constexpr std::size_t MAX_LOG_FILE_SIZE = 10 * 1024 * 1024;
+static constexpr std::size_t MAX_LOG_FILE_SIZE = 50 * 1024 * 1024;
 static constexpr std::size_t MAX_LOG_FILES = 3;
 
 class Logger {
