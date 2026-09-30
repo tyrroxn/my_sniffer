@@ -5,8 +5,8 @@
 ** UdpParser
 */
 
-#include "UdpParser.hpp"
-#include "Helper.hpp"
+#include "parsers/UdpParser.hpp"
+#include "utils/Helper.hpp"
 
 using namespace sniffer;
 

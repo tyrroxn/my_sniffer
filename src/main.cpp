@@ -4,24 +4,24 @@
 ** File description:
 ** main
 */
-#include "CaptureNetwork.hpp"
-#include "SignalHandler.hpp"
-#include "EthernetParser.hpp"
-#include "Ipv4Parser.hpp"
-#include "TcpParser.hpp"
-#include "UdpParser.hpp"
-#include "PacketDisplay.hpp"
-#include "PacketFilter.hpp"
-#include "TerminalInput.hpp"
-#include "Logger.hpp"
+#include "capture/CaptureNetwork.hpp"
+#include "utils/SignalHandler.hpp"
+#include "parsers/EthernetParser.hpp"
+#include "parsers/Ipv4Parser.hpp"
+#include "parsers/TcpParser.hpp"
+#include "parsers/UdpParser.hpp"
+#include "cli/PacketDisplay.hpp"
+#include "cli/PacketFilter.hpp"
+#include "cli/TerminalInput.hpp"
+#include "log/Logger.hpp"
 #include <memory>
 #include <optional>
 #include <string>
 
 #if defined(__APPLE__)
-    #include "MacCapture.hpp"
+    #include "capture/MacCapture.hpp"
 #elif defined(__linux__)
-    #include "LinuxCapture.hpp"
+    #include "capture/LinuxCapture.hpp"
 #else
     #error "No capture backend implemented for this platform"
 #endif

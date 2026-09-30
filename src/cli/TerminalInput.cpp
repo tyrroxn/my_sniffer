@@ -5,7 +5,7 @@
 ** TerminalInput
 */
 
-#include "TerminalInput.hpp"
+#include "cli/TerminalInput.hpp"
 
 #include <poll.h>
 #include <unistd.h>

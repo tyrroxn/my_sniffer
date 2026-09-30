@@ -8,11 +8,11 @@
 #ifndef LOGGER_HPP_
 #define LOGGER_HPP_
 
-#include "Packet.hpp"
-#include "Ipv4Parser.hpp"
-#include "TcpParser.hpp"
-#include "UdpParser.hpp"
-#include "Helper.hpp"
+#include "utils/Packet.hpp"
+#include "parsers/Ipv4Parser.hpp"
+#include "parsers/TcpParser.hpp"
+#include "parsers/UdpParser.hpp"
+#include "utils/Helper.hpp"
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <cstdio>
@@ -25,12 +25,12 @@ class logger;
 
 namespace sniffer {
 
-static constexpr std::size_t MAX_LOG_FILE_SIZE = 10 * 1024 * 1024;
+static constexpr std::size_t MAX_LOG_FILE_SIZE = 50 * 1024 * 1024;
 static constexpr std::size_t MAX_LOG_FILES = 3;
 
 class Logger {
     public:
-        static void init(bool active, const std::string &logFilePath);
+        static std::string init(bool active, const std::string &logFilePath);
         static void debug(const std::string &message);
         static void info(const std::string &message);
         static void warn(const std::string &message);

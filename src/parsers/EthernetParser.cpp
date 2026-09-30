@@ -5,8 +5,8 @@
 ** EthernetParser
 */
 
-#include "EthernetParser.hpp"
-#include "Helper.hpp"
+#include "parsers/EthernetParser.hpp"
+#include "utils/Helper.hpp"
 
 using namespace sniffer;
 

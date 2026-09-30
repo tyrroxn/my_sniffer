@@ -8,7 +8,7 @@
 #ifndef PACKETFILTER_HPP_
 #define PACKETFILTER_HPP_
 
-#include "Packet.hpp"
+#include "utils/Packet.hpp"
 #include <map>
 #include <optional>
 #include <string>

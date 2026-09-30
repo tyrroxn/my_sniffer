@@ -7,7 +7,7 @@
 
 #include <criterion/criterion.h>
 #include <cstdlib>
-#include "Ipv4Parser.hpp"
+#include "parsers/Ipv4Parser.hpp"
 
 using sniffer::Ipv4Parser;
 using sniffer::Ipv4Header;

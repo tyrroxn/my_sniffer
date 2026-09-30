@@ -7,7 +7,7 @@
 
 #include <criterion/criterion.h>
 #include <ctime>
-#include "PacketFilter.hpp"
+#include "cli/PacketFilter.hpp"
 
 using namespace sniffer;
 

@@ -7,8 +7,8 @@
 
 #ifndef MACCAPTURE_HPP_
 #define MACCAPTURE_HPP_
-#include "CaptureNetwork.hpp"
-#include "Packet.hpp"
+#include "capture/CaptureNetwork.hpp"
+#include "utils/Packet.hpp"
 
 namespace sniffer {
 

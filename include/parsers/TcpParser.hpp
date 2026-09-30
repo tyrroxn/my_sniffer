@@ -8,7 +8,7 @@
 #ifndef TCPPARSER_HPP_
 #define TCPPARSER_HPP_
 
-#include "Packet.hpp"
+#include "utils/Packet.hpp"
 
 namespace sniffer {
 class TcpParser {

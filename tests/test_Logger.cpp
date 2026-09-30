@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <fstream>
 #include <sstream>
-#include "Logger.hpp"
+#include "log/Logger.hpp"
 
 using namespace sniffer;
 
@@ -26,49 +26,61 @@ static std::string readFile(const std::string &path)
 
 Test(Logger, inactive_does_not_crash_or_create_file)
 {
-    std::string path = "/tmp/my_sniffer_test_logger_inactive.log";
-    std::remove(path.c_str());
+    std::string base = "/tmp/my_sniffer_test_logger_inactive.log";
 
-    Logger::init(false, path);
+    std::string resolved = Logger::init(false, base);
     Logger::debug("debug message");
     Logger::info("info message");
     Logger::warn("warn message");
     Logger::error("error message");
 
-    std::ifstream file(path);
-    cr_assert_not(file.good(), "no log file should be created when logging is inactive");
+    cr_assert_eq(resolved, "", "init() must return an empty path when inactive");
 }
+
 
 Test(Logger, active_writes_all_levels_to_file)
 {
-    std::string path = "/tmp/my_sniffer_test_logger_levels.log";
-    std::remove(path.c_str());
+    std::string base = "/tmp/my_sniffer_test_logger_levels.log";
 
-    Logger::init(true, path);
+    std::string resolved = Logger::init(true, base);
     Logger::debug("debug message");
     Logger::info("info message");
     Logger::warn("warn message");
     Logger::error("error message");
 
-    std::string content = readFile(path);
+    cr_assert_neq(resolved, "");
+    std::string content = readFile(resolved);
     cr_assert(content.find("[debug] debug message") != std::string::npos);
     cr_assert(content.find("[info] info message") != std::string::npos);
     cr_assert(content.find("warning] warn message") != std::string::npos);
     cr_assert(content.find("[error] error message") != std::string::npos);
+    std::remove(resolved.c_str());
 }
 
 Test(Logger, no_blank_lines_between_entries)
 {
-    std::string path = "/tmp/my_sniffer_test_logger_no_blank.log";
-    std::remove(path.c_str());
+    std::string base = "/tmp/my_sniffer_test_logger_no_blank.log";
 
-    Logger::init(true, path);
+    std::string resolved = Logger::init(true, base);
     Logger::debug("line one");
     Logger::debug("line two");
 
-    std::string content = readFile(path);
+    std::string content = readFile(resolved);
     cr_assert_eq(content.find("\n\n"), std::string::npos,
         "consecutive log entries must not be separated by a blank line");
+    std::remove(resolved.c_str());
+}
+
+Test(Logger, timestamp_inserted_before_extension)
+{
+    std::string resolved = Logger::init(true, "/tmp/my_sniffer_test_logger_ts.log");
+
+    cr_assert_neq(resolved, "");
+    cr_assert(resolved.find("/tmp/my_sniffer_test_logger_ts_") == 0,
+        "timestamp must be inserted right after the base name");
+    cr_assert(resolved.rfind(".log") == resolved.size() - 4,
+        "extension must be preserved at the end");
+    std::remove(resolved.c_str());
 }
 
 // ===== writeLog helpers =====

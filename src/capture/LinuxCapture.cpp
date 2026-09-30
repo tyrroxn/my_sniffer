@@ -5,7 +5,7 @@
 ** LinuxCapture
 */
 
-#include "LinuxCapture.hpp"
+#include "capture/LinuxCapture.hpp"
 using namespace sniffer;
 
 

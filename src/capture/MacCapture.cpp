@@ -5,7 +5,7 @@
 ** MacCapture
 */
 
-#include "MacCapture.hpp"
+#include "capture/MacCapture.hpp"
 
 #include <cerrno>
 #include <cstdio>

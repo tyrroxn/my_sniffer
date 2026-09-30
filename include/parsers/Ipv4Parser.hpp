@@ -8,7 +8,7 @@
 #ifndef IPV4PARSER_HPP_
 #define IPV4PARSER_HPP_
 
-#include "Packet.hpp"
+#include "utils/Packet.hpp"
 
 namespace sniffer {
 static constexpr std::size_t IPV4_MIN_HEADER_LEN = 20;

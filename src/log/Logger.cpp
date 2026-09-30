@@ -5,33 +5,53 @@
 ** Logger
 */
 
-#include "Logger.hpp"
-
+#include "log/Logger.hpp"
+#include <ctime>
 
 using namespace sniffer;
 
-void Logger::init(bool active, const std::string &logFilePath)
+static std::string timestampedLogPath(const std::string &path)
+{
+    std::time_t now = std::time(nullptr);
+    std::tm localTime{};
+
+    localtime_r(&now, &localTime);
+
+    char timestamp[32];
+    std::strftime(timestamp, sizeof(timestamp), "%d-%m-%Y_%H-%M-%S", &localTime);
+
+    std::size_t slash = path.find_last_of('/');
+    std::size_t dot = path.find_last_of('.');
+    bool hasExtension = dot != std::string::npos && (slash == std::string::npos || dot > slash);
+
+    if (hasExtension)
+        return path.substr(0, dot) + "_" + timestamp + path.substr(dot);
+    return path + "_" + timestamp;
+}
+
+std::string Logger::init(bool active, const std::string &logFilePath)
 {
     if (!active) {
         logger = nullptr;
-        return;
+        return "";
     }
+    std::string path = timestampedLogPath(logFilePath);
 
     try {
         auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-            logFilePath, MAX_LOG_FILE_SIZE, MAX_LOG_FILES);
+            path, MAX_LOG_FILE_SIZE, MAX_LOG_FILES);
         logger = std::make_shared<spdlog::logger>("my_sniffer", sink);
     } catch (const spdlog::spdlog_ex &e) {
         std::fprintf(stderr, "Logger: failed to open log file '%s': %s\n",
-            logFilePath.c_str(), e.what());
+            path.c_str(), e.what());
         logger = nullptr;
-        return;
+        return "";
     }
 
     logger->set_level(spdlog::level::debug);
     logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");
     logger->flush_on(spdlog::level::warn);
-    return;
+    return path;
 }
 
 void Logger::debug(const std::string &message)
