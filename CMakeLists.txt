@@ -78,6 +78,7 @@ add_executable(${ANALYSE_LOG_NAME}
     ${PROJECT_SOURCE_DIR}/src/analysis/LogParser.cpp
     ${PROJECT_SOURCE_DIR}/src/analysis/SpikeServicesDetector.cpp
     ${PROJECT_SOURCE_DIR}/src/analysis/SpikeNetworkDetector.cpp
+    ${PROJECT_SOURCE_DIR}/src/analysis/BeaconDetector.cpp
 )
 
 target_include_directories(${ANALYSE_LOG_NAME} PUBLIC
@@ -116,6 +117,7 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/tests/test_LogParser.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_SpikeServicesDetector.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_SpikeNetworkDetector.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_BeaconDetector.cpp
         ${PROJECT_SOURCE_DIR}/src/utils/Helper.cpp
         ${PROJECT_SOURCE_DIR}/src/parsers/EthernetParser.cpp
         ${PROJECT_SOURCE_DIR}/src/parsers/Ipv4Parser.cpp
@@ -126,6 +128,7 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/src/analysis/LogParser.cpp
         ${PROJECT_SOURCE_DIR}/src/analysis/SpikeServicesDetector.cpp
         ${PROJECT_SOURCE_DIR}/src/analysis/SpikeNetworkDetector.cpp
+        ${PROJECT_SOURCE_DIR}/src/analysis/BeaconDetector.cpp
     )
 
     target_include_directories(unit_tests PUBLIC

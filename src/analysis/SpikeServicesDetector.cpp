@@ -18,7 +18,6 @@ std::optional<SpikeAlert> SpikeServicesDetector::addPacket(double timestampSecon
 
     Service service{sourceIp, destinationIp, destinationPort};
 
-    // Récupère la liste des paquets récents associés à ce service.
     std::deque<std::pair<double, std::size_t>> &recentPackets = recentPacketsByService[service];
 
     while (!recentPackets.empty() && timestampSeconds - recentPackets.front().first > windowSeconds)
@@ -33,11 +32,13 @@ std::optional<SpikeAlert> SpikeServicesDetector::addPacket(double timestampSecon
     auto lastAlert = lastAlerts.find(service);
     if (lastAlert != lastAlerts.end() && timestampSeconds - lastAlert->second < realertSeconds)
         return std::nullopt;
-    lastAlerts[service] = timestampSeconds;
 
+    lastAlerts[service] = timestampSeconds;
     std::size_t byteCount = 0;
+
     for (const auto &[timestamp, bytes] : recentPackets)
         byteCount += bytes;
+
     return SpikeAlert{timestampSeconds, recentPackets.front().first, sourceIp, destinationIp,
         destinationPort, recentPackets.size(), byteCount};
 }

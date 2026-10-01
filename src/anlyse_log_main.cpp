@@ -5,6 +5,7 @@
 ** analyse_log main
 */
 
+#include "analysis/BeaconDetector.hpp"
 #include "analysis/LogParser.hpp"
 #include "analysis/SpikeNetworkDetector.hpp"
 #include "analysis/SpikeServicesDetector.hpp"
@@ -27,6 +28,7 @@ static void printUsage(const char *programName)
         "Analyses a my_sniffer log (minimum or detailed mode) and reports\n"
         "[SERVICE-SPIKE]: abnormal volume from one IP to one service (IP:port).\n"
         "[NETWORK-SPIKE]: whole network traffic at least 3x its usual average.\n"
+        "[BEACON]:        connections to one destination (IP:port) at a nearly constant interval.\n"
         "Rotated parts (<name>.1.log, <name>.2.log...) are read too, oldest first.\n";
     return;
 }
@@ -76,6 +78,20 @@ static void reportNetwork(const NetworkSpikeAlert &alert)
     return;
 }
 
+static void reportBeacon(const BeaconAlert &alert)
+{
+    std::ostringstream interval;
+
+    interval << std::fixed << std::setprecision(1) << alert.intervalSeconds << "s (deviation "
+        << std::setprecision(2) << alert.deviationSeconds << "s)";
+    std::cout << "[" << formatTime(alert.timestampSeconds) << "] [BEACON] "
+        << alert.sourceIp << " -> " << alert.destinationIp << ":" << alert.destinationPort
+        << "  " << alert.occurrences << " connections every " << interval.str()
+        << "  => possible malware / C2 beaconing" << std::endl;
+    return;
+}
+
+
 static std::vector<std::filesystem::path> logParts(const std::filesystem::path &path)
 {
     std::filesystem::path directory = path.parent_path();
@@ -119,10 +135,12 @@ int main(int argc, char **argv)
     std::vector<std::filesystem::path> parts = logParts(argv[1]);
     SpikeServicesDetector spikes;
     SpikeNetworkDetector networkSpikes;
+    BeaconDetector beacons;
     std::size_t lines = 0;
     std::size_t packets = 0;
     std::size_t alerts = 0;
     std::size_t networkAlerts = 0;
+    std::size_t beaconAlerts = 0;
 
     for (const std::filesystem::path &part : parts) {
         std::ifstream file(part);
@@ -150,6 +168,12 @@ int main(int argc, char **argv)
                 networkAlerts++;
                 reportNetwork(*networkAlert);
             }
+            std::optional<BeaconAlert> beaconAlert = beacons.addPacket(entry->timestampSeconds,
+                entry->sourceIp, entry->destinationIp, entry->destinationPort, entry->tcpFlags);
+            if (beaconAlert) {
+                beaconAlerts++;
+                reportBeacon(*beaconAlert);
+            }
         }
         lines += parser.getNbLines();
     }
@@ -157,6 +181,7 @@ int main(int argc, char **argv)
     std::cout << "\n===== Summary =====\n"
         << parts.size() << " file(s), " << lines << " line(s) read, " << packets << " packet record(s)\n"
         << "SERVICE-SPIKE: " << alerts << "\n"
-        << "NETWORK-SPIKE: " << networkAlerts << std::endl;
+        << "NETWORK-SPIKE: " << networkAlerts << "\n"
+        << "BEACON: " << beaconAlerts << std::endl;
     return 0;
 }
