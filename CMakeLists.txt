@@ -120,6 +120,8 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/tests/test_SpikeServicesDetector.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_SpikeNetworkDetector.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_BeaconDetector.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_IpWhitelist.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_ForeignIpDetector.cpp
         ${PROJECT_SOURCE_DIR}/src/utils/Helper.cpp
         ${PROJECT_SOURCE_DIR}/src/parsers/EthernetParser.cpp
         ${PROJECT_SOURCE_DIR}/src/parsers/Ipv4Parser.cpp
@@ -131,6 +133,8 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/src/analysis/SpikeServicesDetector.cpp
         ${PROJECT_SOURCE_DIR}/src/analysis/SpikeNetworkDetector.cpp
         ${PROJECT_SOURCE_DIR}/src/analysis/BeaconDetector.cpp
+        ${PROJECT_SOURCE_DIR}/src/analysis/IpWhitelist.cpp
+        ${PROJECT_SOURCE_DIR}/src/analysis/ForeignIpDetector.cpp
     )
 
     target_include_directories(unit_tests PUBLIC

@@ -46,8 +46,11 @@ std::vector<ForeignIpAlert> ForeignIpDetector::addPacket(double timestampSeconds
 
     if (!sourceForeign && !destinationForeign)
         return alerts;
-    direction = sourceForeign ? Direction::Incoming : Direction::Outgoing;
-    std::uint16_t servicePort = direction == Direction::Outgoing ? destinationPort : sourcePort;
+    if (!sourceForeign)
+        direction = Direction::Outgoing;
+    else if (!destinationForeign)
+        direction = Direction::Incoming;
+    std::uint16_t servicePort = direction == Direction::Incoming ? sourcePort : destinationPort;
 
     ForeignIpAlert alert{timestampSeconds, "", direction, Zone::Wan, sourceIp, sourcePort,
         destinationIp, destinationPort, protocol};
