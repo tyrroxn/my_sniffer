@@ -6,6 +6,8 @@
 */
 
 #include "analysis/BeaconDetector.hpp"
+#include "analysis/ForeignIpDetector.hpp"
+#include "analysis/IpWhitelist.hpp"
 #include "analysis/LogParser.hpp"
 #include "analysis/SpikeNetworkDetector.hpp"
 #include "analysis/SpikeServicesDetector.hpp"
@@ -15,22 +17,75 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
 
 using namespace analyser;
 
+static constexpr std::size_t MAX_LISTED_PORTS = 10;
 
 static void printUsage(const char *programName)
 {
-    std::cout << "Usage: " << programName << " <log file>\n\n"
+    std::cout << "Usage: " << programName << " [-w <whitelist>] <log file>\n\n"
         "Analyses a my_sniffer log (minimum or detailed mode) and reports\n"
         "[SERVICE-SPIKE]: abnormal volume from one IP to one service (IP:port).\n"
         "[NETWORK-SPIKE]: whole network traffic at least 3x its usual average.\n"
         "[BEACON]:        connections to one destination (IP:port) at a nearly constant interval.\n"
-        "Rotated parts (<name>.1.log, <name>.2.log...) are read too, oldest first.\n";
+        "[FOREIGN-IP]:    traffic to or from an IPv4 address outside the whitelist,\n"
+        "                 with its direction and LAN (RFC1918) / WAN context (only with -w).\n"
+        "Rotated parts (<name>.1.log, <name>.2.log...) are read too, oldest first.\n\n"
+        "Options:\n"
+        "  -h, --help                  Show this help message and exit\n"
+        "  -w, --whitelist <file>      Trusted IPs and ranges (CIDR), one per line:\n"
+        "                              enables [FOREIGN-IP] (e.g. -w config/whitelist.conf)\n";
     return;
+}
+
+static int parseArgs(int argc, char **argv, std::string &logPath, std::optional<std::string> &whitelistPath)
+{
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+
+        if (arg == "-h" || arg == "--help") {
+            printUsage(argv[0]);
+            return 1;
+        } else if (arg == "-w" || arg == "--whitelist") {
+            if (i + 1 >= argc) {
+                std::cerr << "Missing value for " << arg << std::endl;
+                return 2;
+            }
+            whitelistPath = argv[++i];
+        } else if (arg.rfind("--whitelist=", 0) == 0)
+            whitelistPath = arg.substr(12);
+        else if (logPath.empty() && arg[0] != '-')
+            logPath = arg;
+        else {
+            std::cerr << "Unknown argument: " << arg << std::endl;
+            return 2;
+        }
+    }
+    if (logPath.empty()) {
+        printUsage(argv[0]);
+        return 2;
+    }
+    return 0;
+}
+
+static std::optional<ForeignIpDetector> loadWhitelist(const std::string &path, bool &failed)
+{
+    IpWhitelist whitelist;
+    std::string error;
+
+    failed = false;
+    if (!whitelist.load(path, error)) {
+        std::cerr << "Error: " << error << std::endl;
+        failed = true;
+        return std::nullopt;
+    }
+    std::cout << "Whitelist: " << whitelist.size() << " range(s) from " << path << std::endl;
+    return ForeignIpDetector(std::move(whitelist));
 }
 
 static std::string formatTime(double seconds)
@@ -91,6 +146,41 @@ static void reportBeacon(const BeaconAlert &alert)
     return;
 }
 
+static std::string zoneName(Zone zone)
+{
+    return zone == Zone::Lan ? "LAN" : "WAN";
+}
+
+static std::string directionLabel(Direction direction, Zone zone)
+{
+    if (direction == Direction::Outgoing)
+        return "outgoing to " + zoneName(zone);
+    if (direction == Direction::Incoming)
+        return "incoming from " + zoneName(zone);
+    return "transit, " + zoneName(zone);
+}
+
+static std::string endpoint(const std::string &ip, std::uint16_t port)
+{
+    return port == 0 ? ip : ip + ":" + std::to_string(port);
+}
+
+static void reportForeignIp(const ForeignIpAlert &alert)
+{
+    std::cout << "[" << formatTime(alert.timestampSeconds) << "] [FOREIGN-IP] "
+        << directionLabel(alert.direction, alert.zone) << "  "
+        << endpoint(alert.sourceIp, alert.sourcePort) << " -> "
+        << endpoint(alert.destinationIp, alert.destinationPort)
+        << (alert.protocol.empty() ? "" : " " + alert.protocol) << "  => ";
+    if (alert.direction == Direction::Outgoing)
+        std::cout << "destination ";
+    else if (alert.direction == Direction::Incoming)
+        std::cout << "source ";
+    std::cout << alert.foreignIp << " not in whitelist" << std::endl;
+    return;
+}
+
+
 
 static std::vector<std::filesystem::path> logParts(const std::filesystem::path &path)
 {
@@ -123,16 +213,24 @@ static bool startsCapture(const std::filesystem::path &path)
 
 int main(int argc, char **argv)
 {
-    if (argc == 2 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
-        printUsage(argv[0]);
+    std::string logPath;
+    std::optional<std::string> whitelistPath;
+    bool whitelistFailed = false;
+
+    int result = parseArgs(argc, argv, logPath, whitelistPath);
+    if (result == 1)
         return 0;
-    }
-    if (argc != 2) {
-        printUsage(argv[0]);
+    if (result == 2)
         return 1;
+
+    std::optional<ForeignIpDetector> foreignIps;
+    if (whitelistPath) {
+        foreignIps = loadWhitelist(*whitelistPath, whitelistFailed);
+        if (whitelistFailed)
+            return 1;
     }
 
-    std::vector<std::filesystem::path> parts = logParts(argv[1]);
+    std::vector<std::filesystem::path> parts = logParts(logPath);
     SpikeServicesDetector spikes;
     SpikeNetworkDetector networkSpikes;
     BeaconDetector beacons;
@@ -141,6 +239,7 @@ int main(int argc, char **argv)
     std::size_t alerts = 0;
     std::size_t networkAlerts = 0;
     std::size_t beaconAlerts = 0;
+    std::size_t foreignAlerts = 0;
 
     for (const std::filesystem::path &part : parts) {
         std::ifstream file(part);
@@ -174,6 +273,15 @@ int main(int argc, char **argv)
                 beaconAlerts++;
                 reportBeacon(*beaconAlert);
             }
+            if (!foreignIps)
+                continue;
+            const auto foreignAlertsForPacket = foreignIps->addPacket(entry->timestampSeconds,
+                entry->sizeBytes, entry->sourceIp, entry->sourcePort, entry->destinationIp,
+                entry->destinationPort,entry->protocol);
+            for (const ForeignIpAlert &foreignAlert : foreignAlertsForPacket) {
+                foreignAlerts++;
+                reportForeignIp(foreignAlert);
+            }
         }
         lines += parser.getNbLines();
     }
@@ -183,5 +291,10 @@ int main(int argc, char **argv)
         << "SERVICE-SPIKE: " << alerts << "\n"
         << "NETWORK-SPIKE: " << networkAlerts << "\n"
         << "BEACON: " << beaconAlerts << std::endl;
+    if (!foreignIps) {
+        std::cout << "FOREIGN-IP: disabled (use -w <whitelist>)" << std::endl;
+        return 0;
+    }
+    std::cout << "FOREIGN-IP: " << foreignAlerts << std::endl;
     return 0;
 }
