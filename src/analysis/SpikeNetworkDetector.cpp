@@ -43,13 +43,16 @@ std::optional<NetworkSpikeAlert> SpikeNetworkDetector::addPacket(double timestam
         return std::nullopt;
     }
     periodHadSpike = true;
+    
     if (lastAlert && timestampSeconds - *lastAlert < realertSeconds)
         return std::nullopt;
     lastAlert = timestampSeconds;
 
     std::size_t byteCount = 0;
+
     for (const auto &[timestamp, bytes] : recentPackets)
         byteCount += bytes;
+
     return NetworkSpikeAlert{timestampSeconds, recentPackets.front().first, recentPackets.size(),
         byteCount, averagePackets};
 }
