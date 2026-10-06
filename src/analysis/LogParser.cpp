@@ -83,14 +83,42 @@ std::optional<std::string> parseFlags(const std::string &text)
     return text.substr(open, close - open + 1);
 }
 
+bool parsePayloadBytes(const std::string &line, LogEntry &entry)
+{
+    if (entry.payloadSize == 0 || !entry.payload.empty())
+        return false;
+    for (std::size_t i = 0; i + 1 < line.size() && entry.payload.size() < PAYLOAD_PREFIX_BYTES; i += 3) {
+        unsigned int byte = 0;
+        auto [byteEnd, byteError] = std::from_chars(line.data() + i, line.data() + i + 2, byte, 16);
+        if (byteError != std::errc() || byteEnd != line.data() + i + 2
+            || (i + 2 < line.size() && line[i + 2] != ' ')) {
+            entry.payload.clear();
+            return false;
+        }
+        entry.payload.push_back(static_cast<std::uint8_t>(byte));
+    }
+    return !entry.payload.empty();
+}
+
 void parseDetailedBody(const std::string &line, LogEntry &entry)
 {
+    if (parsePayloadBytes(line, entry))
+        return;
+
     std::istringstream iss(line);
     std::vector<std::string> tokens{std::istream_iterator<std::string>(iss),
         std::istream_iterator<std::string>()};
 
     if (tokens.empty())
         return;
+    if (tokens[0] == "payload" && tokens.size() >= 2 && tokens[1].size() > 1 && tokens[1][0] == '('
+        && !entry.protocol.empty() && entry.payloadSize == 0) {
+        const std::string &size = tokens[1];
+        auto [sizeEnd, sizeError] = std::from_chars(size.data() + 1, size.data() + size.size(), entry.payloadSize);
+        if (sizeError != std::errc() || sizeEnd != size.data() + size.size())
+            entry.payloadSize = 0;
+        return;
+    }
     if (tokens[0] == "IPv4" && tokens.size() >= 4 && tokens[2] == "->") {
         entry.sourceIp = tokens[1];
         entry.destinationIp = tokens[3];
