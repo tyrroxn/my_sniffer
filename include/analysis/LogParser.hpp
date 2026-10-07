@@ -13,21 +13,25 @@
 #include <istream>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace analyser {
 
 const std::string DETAILED_HEADER_START = "==== packet (";
 const std::string DETAILED_HEADER_END = " bytes) ====";
+constexpr std::size_t PAYLOAD_PREFIX_BYTES = 20;
 
 struct LogEntry {
     double timestampSeconds = 0.0;
     std::size_t sizeBytes = 0;
     std::string sourceIp;
     std::uint16_t sourcePort = 0;
-    std::string destinationIp; 
+    std::string destinationIp;
     std::uint16_t destinationPort = 0;
     std::string protocol;
     std::optional<std::string> tcpFlags;
+    std::size_t payloadSize = 0; 
+    std::vector<std::uint8_t> payload; 
 };
 
 class LogParser {

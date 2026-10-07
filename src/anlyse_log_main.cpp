@@ -9,6 +9,7 @@
 #include "analysis/ForeignIpDetector.hpp"
 #include "analysis/IpWhitelist.hpp"
 #include "analysis/LogParser.hpp"
+#include "analysis/ProtocolDetector.hpp"
 #include "analysis/SpikeNetworkDetector.hpp"
 #include "analysis/SpikeServicesDetector.hpp"
 #include <cmath>
@@ -35,6 +36,8 @@ static void printUsage(const char *programName)
         "[BEACON]:        connections to one destination (IP:port) at a nearly constant interval.\n"
         "[FOREIGN-IP]:    traffic to or from an IPv4 address outside the whitelist,\n"
         "                 with its direction and LAN (RFC1918) / WAN context (only with -w).\n"
+        "[PROTO-MISMATCH]: payload not matching the protocol of a standard port\n"
+        "                 (TCP 80 HTTP, 443 TLS, 22 SSH...), detailed logs only.\n"
         "Rotated parts (<name>.1.log, <name>.2.log...) are read too, oldest first.\n\n"
         "Options:\n"
         "  -h, --help                  Show this help message and exit\n"
@@ -180,6 +183,31 @@ static void reportForeignIp(const ForeignIpAlert &alert)
     return;
 }
 
+static std::string payloadPreview(const std::vector<std::uint8_t> &preview, std::size_t payloadSize)
+{
+    std::ostringstream oss;
+    std::string text;
+
+    for (std::uint8_t byte : preview) {
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+        text += (byte >= 0x20 && byte < 0x7f) ? static_cast<char>(byte) : '.';
+    }
+    oss << "\"" << text << (payloadSize > preview.size() ? "...\"" : "\"");
+    return oss.str();
+}
+
+static void reportProtocolMismatch(const ProtocolMismatchAlert &alert)
+{
+    std::cout << "[" << formatTime(alert.timestampSeconds) << "] [PROTO-MISMATCH] "
+        << alert.sourceIp << ":" << alert.sourcePort << " -> " << alert.destinationIp << ":"
+        << alert.destinationPort << " " << alert.transport
+        << "  expected " << ProtocolDetector::name(alert.expected) << " on port " << alert.servicePort
+        << ", got " << ProtocolDetector::name(alert.detected)
+        << " (" << alert.payloadSize << "B: " << payloadPreview(alert.preview, alert.payloadSize) << ")"
+        << "  => unexpected protocol on a standard port" << std::endl;
+    return;
+}
+
 
 
 static std::vector<std::filesystem::path> logParts(const std::filesystem::path &path)
@@ -234,7 +262,10 @@ int main(int argc, char **argv)
     SpikeServicesDetector spikes;
     SpikeNetworkDetector networkSpikes;
     BeaconDetector beacons;
+    ProtocolDetector protocols;
     std::size_t lines = 0;
+    std::size_t payloadRecords = 0;
+    std::size_t protocolAlerts = 0;
     std::size_t packets = 0;
     std::size_t alerts = 0;
     std::size_t networkAlerts = 0;
@@ -273,6 +304,13 @@ int main(int argc, char **argv)
                 beaconAlerts++;
                 reportBeacon(*beaconAlert);
             }
+            if (entry->payloadSize > 0)
+                payloadRecords++;
+            std::optional<ProtocolMismatchAlert> protocolAlert = protocols.addPacket(*entry);
+            if (protocolAlert) {
+                protocolAlerts++;
+                reportProtocolMismatch(*protocolAlert);
+            }
             if (!foreignIps)
                 continue;
             const auto foreignAlertsForPacket = foreignIps->addPacket(entry->timestampSeconds,
@@ -291,6 +329,10 @@ int main(int argc, char **argv)
         << "SERVICE-SPIKE: " << alerts << "\n"
         << "NETWORK-SPIKE: " << networkAlerts << "\n"
         << "BEACON: " << beaconAlerts << std::endl;
+    if (payloadRecords == 0)
+        std::cout << "PROTO-MISMATCH: disabled (no payload in the log, capture with my_sniffer -d)" << std::endl;
+    else
+        std::cout << "PROTO-MISMATCH: " << protocolAlerts << std::endl;
     if (!foreignIps) {
         std::cout << "FOREIGN-IP: disabled (use -w <whitelist>)" << std::endl;
         return 0;

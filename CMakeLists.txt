@@ -81,6 +81,7 @@ add_executable(${ANALYSE_LOG_NAME}
     ${PROJECT_SOURCE_DIR}/src/analysis/BeaconDetector.cpp
     ${PROJECT_SOURCE_DIR}/src/analysis/IpWhitelist.cpp
     ${PROJECT_SOURCE_DIR}/src/analysis/ForeignIpDetector.cpp
+    ${PROJECT_SOURCE_DIR}/src/analysis/ProtocolDetector.cpp
 )
 
 target_include_directories(${ANALYSE_LOG_NAME} PUBLIC
@@ -122,6 +123,7 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/tests/test_BeaconDetector.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_IpWhitelist.cpp
         ${PROJECT_SOURCE_DIR}/tests/test_ForeignIpDetector.cpp
+        ${PROJECT_SOURCE_DIR}/tests/test_ProtocolDetector.cpp
         ${PROJECT_SOURCE_DIR}/src/utils/Helper.cpp
         ${PROJECT_SOURCE_DIR}/src/parsers/EthernetParser.cpp
         ${PROJECT_SOURCE_DIR}/src/parsers/Ipv4Parser.cpp
@@ -135,6 +137,7 @@ if (CRITERION_FOUND)
         ${PROJECT_SOURCE_DIR}/src/analysis/BeaconDetector.cpp
         ${PROJECT_SOURCE_DIR}/src/analysis/IpWhitelist.cpp
         ${PROJECT_SOURCE_DIR}/src/analysis/ForeignIpDetector.cpp
+        ${PROJECT_SOURCE_DIR}/src/analysis/ProtocolDetector.cpp
     )
 
     target_include_directories(unit_tests PUBLIC
@@ -143,6 +146,7 @@ if (CRITERION_FOUND)
     )
     target_link_libraries(unit_tests PRIVATE ${CRITERION_LIBRARIES} spdlog::spdlog)
     target_compile_options(unit_tests PRIVATE ${CRITERION_CFLAGS_OTHER})
+    target_compile_options(unit_tests PRIVATE -include cstdint)
 
     target_compile_options(unit_tests PRIVATE --coverage -O0 -g)
     target_link_options(unit_tests PRIVATE --coverage)
