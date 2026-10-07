@@ -264,7 +264,7 @@ void Report::printOverview(std::ostream &output) const
 {
     output << "===== Log analysis =====\n"
         << padRight("Log:", OVERVIEW_MAX_WIDTH) << logName << ", " << files << " file(s), " << lines << " line(s) read\n"
-        << padRight("Capture:", OVERVIEW_MAX_WIDTH) << packets << " packet record(s), " << formatBytes(bytes) << "\n";
+        << padRight("Capture:", OVERVIEW_MAX_WIDTH);
     if (!firstPacket)
         output << "no packet record\n";
     else {
