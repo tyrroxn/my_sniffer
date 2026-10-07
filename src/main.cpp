@@ -164,6 +164,8 @@ static void parseIpv4Layer(const RawPacket &packet, const EthernetHeader &ethern
     }
 
     ipv4Header = parsedIpv4;
+    if (parsedIpv4.totalLength >= parsedIpv4.headerLength && parsedIpv4.totalLength < ipv4Data.size())
+        ipv4Data.resize(parsedIpv4.totalLength);
     std::vector<std::uint8_t> payload(
         ipv4Data.begin() + static_cast<long>(parsedIpv4.headerLength), ipv4Data.end());
     parseTransportLayer(payload, parsedIpv4.protocol, tcpHeader, udpHeader, errorCount);
