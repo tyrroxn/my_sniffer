@@ -10,22 +10,17 @@
 #include "analysis/IpWhitelist.hpp"
 #include "analysis/LogParser.hpp"
 #include "analysis/ProtocolDetector.hpp"
+#include "analysis/Report.hpp"
 #include "analysis/SpikeNetworkDetector.hpp"
 #include "analysis/SpikeServicesDetector.hpp"
-#include <cmath>
-#include <ctime>
 #include <filesystem>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <vector>
 
 using namespace analyser;
-
-static constexpr std::size_t MAX_LISTED_PORTS = 10;
 
 static void printUsage(const char *programName)
 {
@@ -76,140 +71,6 @@ static int parseArgs(int argc, char **argv, std::string &logPath, std::optional<
     return 0;
 }
 
-static std::optional<ForeignIpDetector> loadWhitelist(const std::string &path, bool &failed)
-{
-    IpWhitelist whitelist;
-    std::string error;
-
-    failed = false;
-    if (!whitelist.load(path, error)) {
-        std::cerr << "Error: " << error << std::endl;
-        failed = true;
-        return std::nullopt;
-    }
-    std::cout << "Whitelist: " << whitelist.size() << " range(s) from " << path << std::endl;
-    return ForeignIpDetector(std::move(whitelist));
-}
-
-static std::string formatTime(double seconds)
-{
-    std::time_t whole = static_cast<std::time_t>(seconds);
-    int milliseconds = static_cast<int>(std::lround((seconds - static_cast<double>(whole)) * 1000.0)) % 1000;
-    std::tm tmValue{};
-    std::ostringstream oss;
-
-    localtime_r(&whole, &tmValue);
-    oss << std::put_time(&tmValue, "%Y-%m-%d %H:%M:%S") << "."
-        << std::setw(3) << std::setfill('0') << milliseconds;
-    return oss.str();
-}
-
-static void reportService(const SpikeAlert &alert)
-{
-    std::ostringstream duration;
-
-    duration << std::fixed << std::setprecision(1) << alert.timestampSeconds - alert.windowStartSeconds;
-    std::cout << "[" << formatTime(alert.timestampSeconds) << "] [SERVICE-SPIKE] "
-        << alert.sourceIp << " -> " << alert.destinationIp << ":" << alert.destinationPort
-        << "  " << alert.packetCount << " packets (" << alert.byteCount << "B)"
-        << " from " << formatTime(alert.windowStartSeconds).substr(11)
-        << " to " << formatTime(alert.timestampSeconds).substr(11) << " (" << duration.str() << "s)"
-        << "  > limit " << SpikeServicesDetector::limit << " in " << SpikeServicesDetector::windowSeconds << "s";
-    std::cout << "  => scan, brute-force or application DoS" << std::endl;
-    return;
-}
-
-static void reportNetwork(const NetworkSpikeAlert &alert)
-{
-    std::ostringstream duration;
-    std::ostringstream average;
-
-    duration << std::fixed << std::setprecision(1) << alert.timestampSeconds - alert.windowStartSeconds;
-    average << std::fixed << std::setprecision(1) << alert.averagePackets;
-    std::cout << "[" << formatTime(alert.timestampSeconds) << "] [NETWORK-SPIKE] "
-        << alert.packetCount << " packets (" << alert.byteCount << "B)"
-        << " from " << formatTime(alert.windowStartSeconds).substr(11)
-        << " to " << formatTime(alert.timestampSeconds).substr(11) << " (" << duration.str() << "s)"
-        << "  >= " << SpikeNetworkDetector::spikeFactor << "x usual " << average.str()
-        << " packets per " << SpikeNetworkDetector::windowSeconds << "s";
-    std::cout << "  => flood or DDoS on the network" << std::endl;
-    return;
-}
-
-static void reportBeacon(const BeaconAlert &alert)
-{
-    std::ostringstream interval;
-
-    interval << std::fixed << std::setprecision(1) << alert.intervalSeconds << "s (deviation "
-        << std::setprecision(2) << alert.deviationSeconds << "s)";
-    std::cout << "[" << formatTime(alert.timestampSeconds) << "] [BEACON] "
-        << alert.sourceIp << " -> " << alert.destinationIp << ":" << alert.destinationPort
-        << "  " << alert.occurrences << " connections every " << interval.str()
-        << "  => possible malware / C2 beaconing" << std::endl;
-    return;
-}
-
-static std::string zoneName(Zone zone)
-{
-    return zone == Zone::Lan ? "LAN" : "WAN";
-}
-
-static std::string directionLabel(Direction direction, Zone zone)
-{
-    if (direction == Direction::Outgoing)
-        return "outgoing to " + zoneName(zone);
-    if (direction == Direction::Incoming)
-        return "incoming from " + zoneName(zone);
-    return "transit, " + zoneName(zone);
-}
-
-static std::string endpoint(const std::string &ip, std::uint16_t port)
-{
-    return port == 0 ? ip : ip + ":" + std::to_string(port);
-}
-
-static void reportForeignIp(const ForeignIpAlert &alert)
-{
-    std::cout << "[" << formatTime(alert.timestampSeconds) << "] [FOREIGN-IP] "
-        << directionLabel(alert.direction, alert.zone) << "  "
-        << endpoint(alert.sourceIp, alert.sourcePort) << " -> "
-        << endpoint(alert.destinationIp, alert.destinationPort)
-        << (alert.protocol.empty() ? "" : " " + alert.protocol) << "  => ";
-    if (alert.direction == Direction::Outgoing)
-        std::cout << "destination ";
-    else if (alert.direction == Direction::Incoming)
-        std::cout << "source ";
-    std::cout << alert.foreignIp << " not in whitelist" << std::endl;
-    return;
-}
-
-static std::string payloadPreview(const std::vector<std::uint8_t> &preview, std::size_t payloadSize)
-{
-    std::ostringstream oss;
-    std::string text;
-
-    for (std::uint8_t byte : preview) {
-        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
-        text += (byte >= 0x20 && byte < 0x7f) ? static_cast<char>(byte) : '.';
-    }
-    oss << "\"" << text << (payloadSize > preview.size() ? "...\"" : "\"");
-    return oss.str();
-}
-
-static void reportProtocolMismatch(const ProtocolMismatchAlert &alert)
-{
-    std::cout << "[" << formatTime(alert.timestampSeconds) << "] [PROTO-MISMATCH] "
-        << alert.sourceIp << ":" << alert.sourcePort << " -> " << alert.destinationIp << ":"
-        << alert.destinationPort << " " << alert.transport
-        << "  expected " << ProtocolDetector::name(alert.expected) << " on port " << alert.servicePort
-        << ", got " << ProtocolDetector::name(alert.detected)
-        << " (" << alert.payloadSize << "B: " << payloadPreview(alert.preview, alert.payloadSize) << ")"
-        << "  => unexpected protocol on a standard port" << std::endl;
-    return;
-}
-
-
-
 static std::vector<std::filesystem::path> logParts(const std::filesystem::path &path)
 {
     std::filesystem::path directory = path.parent_path();
@@ -243,7 +104,7 @@ int main(int argc, char **argv)
 {
     std::string logPath;
     std::optional<std::string> whitelistPath;
-    bool whitelistFailed = false;
+    Report report;
 
     int result = parseArgs(argc, argv, logPath, whitelistPath);
     if (result == 1)
@@ -253,9 +114,15 @@ int main(int argc, char **argv)
 
     std::optional<ForeignIpDetector> foreignIps;
     if (whitelistPath) {
-        foreignIps = loadWhitelist(*whitelistPath, whitelistFailed);
-        if (whitelistFailed)
+        IpWhitelist whitelist;
+        std::string error;
+
+        if (!whitelist.load(*whitelistPath, error)) {
+            std::cerr << "Error: " << error << std::endl;
             return 1;
+        }
+        report.setWhitelist(*whitelistPath, whitelist.size());
+        foreignIps.emplace(std::move(whitelist));
     }
 
     std::vector<std::filesystem::path> parts = logParts(logPath);
@@ -263,15 +130,8 @@ int main(int argc, char **argv)
     SpikeNetworkDetector networkSpikes;
     BeaconDetector beacons;
     ProtocolDetector protocols;
-    std::size_t lines = 0;
-    std::size_t payloadRecords = 0;
-    std::size_t protocolAlerts = 0;
-    std::size_t packets = 0;
-    std::size_t alerts = 0;
-    std::size_t networkAlerts = 0;
-    std::size_t beaconAlerts = 0;
-    std::size_t foreignAlerts = 0;
 
+    report.setLog(logPath, parts.size());
     for (const std::filesystem::path &part : parts) {
         std::ifstream file(part);
         if (!file) {
@@ -281,62 +141,32 @@ int main(int argc, char **argv)
         if (part == parts.front() && !startsCapture(part))
             std::cerr << "Warning: " << part.string() << " does not start the capture, "
                 "older parts were deleted by log rotation" << std::endl;
-        
+
         LogParser parser(file);
 
         while (std::optional<LogEntry> entry = parser.nextEntry()) {
-            packets++;
-            std::optional<SpikeAlert> alert = spikes.addPacket(entry->timestampSeconds,
-                entry->sizeBytes, entry->sourceIp, entry->destinationIp, entry->destinationPort);
-            if (alert) {
-                alerts++;
-                reportService(*alert);
-            }
-            std::optional<NetworkSpikeAlert> networkAlert = networkSpikes.addPacket(entry->timestampSeconds,
-                entry->sizeBytes);
-            if (networkAlert) {
-                networkAlerts++;
-                reportNetwork(*networkAlert);
-            }
-            std::optional<BeaconAlert> beaconAlert = beacons.addPacket(entry->timestampSeconds,
-                entry->sourceIp, entry->destinationIp, entry->destinationPort, entry->tcpFlags);
-            if (beaconAlert) {
-                beaconAlerts++;
-                reportBeacon(*beaconAlert);
-            }
-            if (entry->payloadSize > 0)
-                payloadRecords++;
-            std::optional<ProtocolMismatchAlert> protocolAlert = protocols.addPacket(*entry);
-            if (protocolAlert) {
-                protocolAlerts++;
-                reportProtocolMismatch(*protocolAlert);
-            }
+            report.addPacket(*entry);
+            if (std::optional<SpikeAlert> alert = spikes.addPacket(entry->timestampSeconds,
+                    entry->sizeBytes, entry->sourceIp, entry->destinationIp, entry->destinationPort))
+                report.add(*alert);
+            if (std::optional<NetworkSpikeAlert> alert = networkSpikes.addPacket(entry->timestampSeconds,
+                    entry->sizeBytes))
+                report.add(*alert);
+            if (std::optional<BeaconAlert> alert = beacons.addPacket(entry->timestampSeconds,
+                    entry->sourceIp, entry->destinationIp, entry->destinationPort, entry->tcpFlags))
+                report.add(*alert);
+            if (std::optional<ProtocolMismatchAlert> alert = protocols.addPacket(*entry))
+                report.add(*alert);
             if (!foreignIps)
                 continue;
-            const auto foreignAlertsForPacket = foreignIps->addPacket(entry->timestampSeconds,
-                entry->sizeBytes, entry->sourceIp, entry->sourcePort, entry->destinationIp,
-                entry->destinationPort,entry->protocol);
-            for (const ForeignIpAlert &foreignAlert : foreignAlertsForPacket) {
-                foreignAlerts++;
-                reportForeignIp(foreignAlert);
-            }
+            for (const ForeignIpAlert &alert : foreignIps->addPacket(entry->timestampSeconds,
+                    entry->sizeBytes, entry->sourceIp, entry->sourcePort, entry->destinationIp,
+                    entry->destinationPort, entry->protocol))
+                report.add(alert);
         }
-        lines += parser.getNbLines();
+        report.addLines(parser.getNbLines());
     }
 
-    std::cout << "\n===== Summary =====\n"
-        << parts.size() << " file(s), " << lines << " line(s) read, " << packets << " packet record(s)\n"
-        << "SERVICE-SPIKE: " << alerts << "\n"
-        << "NETWORK-SPIKE: " << networkAlerts << "\n"
-        << "BEACON: " << beaconAlerts << std::endl;
-    if (payloadRecords == 0)
-        std::cout << "PROTO-MISMATCH: disabled (no payload in the log, capture with my_sniffer -d)" << std::endl;
-    else
-        std::cout << "PROTO-MISMATCH: " << protocolAlerts << std::endl;
-    if (!foreignIps) {
-        std::cout << "FOREIGN-IP: disabled (use -w <whitelist>)" << std::endl;
-        return 0;
-    }
-    std::cout << "FOREIGN-IP: " << foreignAlerts << std::endl;
+    report.print(std::cout);
     return 0;
 }
