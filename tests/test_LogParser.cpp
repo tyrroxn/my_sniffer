@@ -322,6 +322,84 @@ Test(LogParser, next_entry_detailed_log)
     cr_assert_eq(parser.getNbLines(), 19);
 }
 
+// ===== payload (detailed mode) =====
+
+static std::optional<LogEntry> parseDetailed(const std::string &body)
+{
+    std::istringstream input("[2026-09-25 10:21:04.618] [debug] ==== packet (100 bytes) ====\n"
+        "Ethernet 00:00:00:00:00:00 -> 00:00:00:00:00:00 | EtherType: 0x800\n"
+        "  IPv4 127.0.0.1 -> 127.0.0.1 | version=4 ihl=5 protocol=TCP (6)\n"
+        "    TCP 50000 -> 80 [PSH, ACK] seq=1 ack=1 win=512 checksum=0x0\n" + body);
+    LogParser parser(input);
+
+    return parser.nextEntry();
+}
+
+Test(LogParser, next_entry_detailed_payload)
+{
+    std::optional<LogEntry> entry = parseDetailed("    payload (6 bytes):\n68 65 6c 6c 6f 0a\n");
+
+    cr_assert(entry.has_value());
+    cr_assert_eq(entry->payloadSize, 6);
+    cr_assert_eq(entry->payload, std::vector<std::uint8_t>({'h', 'e', 'l', 'l', 'o', '\n'}));
+}
+
+Test(LogParser, next_entry_detailed_payload_keeps_prefix)
+{
+    std::string hexdump;
+
+    for (std::size_t i = 0; i < 200; i++)
+        hexdump += (i ? " " : "") + std::string("ab");
+    std::optional<LogEntry> entry = parseDetailed("    payload (200 bytes):\n" + hexdump + "\n");
+
+    cr_assert(entry.has_value());
+    cr_assert_eq(entry->payloadSize, 200, "real size kept");
+    cr_assert_eq(entry->payload.size(), PAYLOAD_PREFIX_BYTES, "only the first bytes are stored");
+    cr_assert_eq(entry->payload[0], 0xab);
+}
+
+Test(LogParser, next_entry_detailed_payload_uppercase_hex)
+{
+    std::optional<LogEntry> entry = parseDetailed("    payload (2 bytes):\nAB 0F\n");
+
+    cr_assert(entry.has_value());
+    cr_assert_eq(entry->payload, std::vector<std::uint8_t>({0xab, 0x0f}));
+}
+
+Test(LogParser, next_entry_detailed_payload_invalid_hexdump)
+{
+    std::optional<LogEntry> bad = parseDetailed("    payload (3 bytes):\n68 zz 6c\n");
+    std::optional<LogEntry> joined = parseDetailed("    payload (2 bytes):\n6865\n");
+
+    cr_assert(bad.has_value());
+    cr_assert_eq(bad->payloadSize, 3);
+    cr_assert(bad->payload.empty(), "invalid byte: nothing kept");
+    cr_assert(joined.has_value());
+    cr_assert(joined->payload.empty(), "bytes must be separated by spaces");
+}
+
+Test(LogParser, next_entry_detailed_payload_invalid_size)
+{
+    std::optional<LogEntry> entry = parseDetailed("    payload (x bytes):\n68 65\n");
+
+    cr_assert(entry.has_value());
+    cr_assert_eq(entry->payloadSize, 0);
+    cr_assert(entry->payload.empty());
+}
+
+Test(LogParser, next_entry_without_payload)
+{
+    std::optional<LogEntry> detailed = parseDetailed("");
+    std::optional<LogEntry> minimum = parseMinimum(PREFIX + MACS
+        + "10.0.0.1 -> 10.0.0.2  TCP  50000 -> 80  [PSH, ACK]  60B");
+
+    cr_assert(detailed.has_value());
+    cr_assert_eq(detailed->payloadSize, 0);
+    cr_assert(detailed->payload.empty());
+    cr_assert(minimum.has_value());
+    cr_assert_eq(minimum->payloadSize, 0, "minimum logs have no payload");
+}
+
 Test(LogParser, next_entry_detailed_keeps_first_transport)
 {
     std::istringstream input(

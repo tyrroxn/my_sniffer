@@ -29,7 +29,7 @@ static bool isHttp(const std::vector<std::uint8_t> &payload)
 static bool isTls(const std::vector<std::uint8_t> &payload)
 {
     return payload.size() >= 3 && payload[0] >= 0x14 && payload[0] <= 0x17
-        && payload[1] == 0x03 && payload[2] <= 0x04 && payload[2] >= 0x00;
+        && payload[1] == 0x03 && payload[2] <= 0x04;
 }
 
 static bool isSsh(const std::vector<std::uint8_t> &payload)
@@ -45,8 +45,7 @@ std::optional<Protocol> ProtocolDetector::expectedProtocol(const std::string &tr
     return std::nullopt;
 }
 
-bool ProtocolDetector::matches(Protocol protocol, const std::string &transport,
-    const std::vector<std::uint8_t> &payload)
+bool ProtocolDetector::matches(Protocol protocol, const std::vector<std::uint8_t> &payload)
 {
     switch (protocol) {
         case Protocol::Http:
@@ -109,10 +108,7 @@ std::optional<ProtocolMismatchAlert> ProtocolDetector::addPacket(const LogEntry 
 {
     if (entry.sourceIp.empty() || entry.destinationIp.empty())
         return std::nullopt;
-    if (entry.protocol == "TCP") {
-        if (!isFirstTcpData(entry))
-            return std::nullopt;
-    } else if (entry.protocol != "UDP" || entry.payloadSize == 0)
+    if (entry.protocol != "TCP" || !isFirstTcpData(entry))
         return std::nullopt;
 
     std::optional<Protocol> expectedProtocols = expectedProtocol(entry.protocol, entry.destinationPort);
@@ -120,7 +116,7 @@ std::optional<ProtocolMismatchAlert> ProtocolDetector::addPacket(const LogEntry 
 
     if (!expectedProtocols)
         expectedProtocols = expectedProtocol(entry.protocol, entry.sourcePort);
-    if (!expectedProtocols || matches(*expectedProtocols, entry.protocol, entry.payload))
+    if (!expectedProtocols || matches(*expectedProtocols, entry.payload))
         return std::nullopt;
 
     const std::string &serverIp = serverIsDestination ? entry.destinationIp : entry.sourceIp;

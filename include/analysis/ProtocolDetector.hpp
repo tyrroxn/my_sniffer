@@ -34,7 +34,7 @@ struct ServiceEntry {
     Protocol protocol;
 };
 
-inline const std::array<ServiceEntry, 10> SERVICES = {{
+inline const std::array<ServiceEntry, 8> SERVICES = {{
     {"TCP", 80, Protocol::Http},
     {"TCP", 8080, Protocol::Http},
     {"TCP", 443, Protocol::Tls},
@@ -71,8 +71,7 @@ class ProtocolDetector {
         std::optional<ProtocolMismatchAlert> addPacket(const LogEntry &entry);
 
         static std::optional<Protocol> expectedProtocol(const std::string &transport, std::uint16_t port);
-        static bool matches(Protocol protocol, const std::string &transport,
-            const std::vector<std::uint8_t> &payload);
+        static bool matches(Protocol protocol, const std::vector<std::uint8_t> &payload);
         static Protocol detect(const std::vector<std::uint8_t> &payload);
         static std::string name(Protocol protocol);
 

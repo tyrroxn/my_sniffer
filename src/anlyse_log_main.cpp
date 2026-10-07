@@ -37,7 +37,7 @@ static void printUsage(const char *programName)
         "[FOREIGN-IP]:    traffic to or from an IPv4 address outside the whitelist,\n"
         "                 with its direction and LAN (RFC1918) / WAN context (only with -w).\n"
         "[PROTO-MISMATCH]: payload not matching the protocol of a standard port\n"
-        "                 (80 HTTP, 443 TLS, 22 SSH, 53 DNS...), detailed logs only.\n"
+        "                 (TCP 80 HTTP, 443 TLS, 22 SSH...), detailed logs only.\n"
         "Rotated parts (<name>.1.log, <name>.2.log...) are read too, oldest first.\n\n"
         "Options:\n"
         "  -h, --help                  Show this help message and exit\n"
