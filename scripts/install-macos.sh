@@ -11,3 +11,5 @@ brew install criterion gcovr || true
 
 cmake -S . -B build -DCMAKE_PREFIX_PATH="$(brew --prefix)"
 cmake --build build
+
+scripts/macos-capture-access.sh build/my_sniffer
