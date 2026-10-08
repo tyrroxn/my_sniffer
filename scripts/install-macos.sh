@@ -9,6 +9,16 @@ command -v brew >/dev/null || { echo "Homebrew is required: https://brew.sh" >&2
 brew install cmake pkg-config
 brew install criterion gcovr || true
 
+pkg_config_paths=()
+for formula in openssl@3 libgit2 libssh2 nanomsg; do
+	if prefix=$(brew --prefix "$formula" 2>/dev/null); then
+		pkg_config_paths+=("$prefix/lib/pkgconfig")
+	fi
+done
+if ((${#pkg_config_paths[@]})); then
+	export PKG_CONFIG_PATH="$(IFS=:; echo "${pkg_config_paths[*]}")${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+fi
+
 cmake -S . -B build -DCMAKE_PREFIX_PATH="$(brew --prefix)"
 cmake --build build
 
