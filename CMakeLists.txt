@@ -22,16 +22,7 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_compile_definitions(DEBUG)
 endif()
 
-if(MSVC)
-    add_compile_options(
-        $<$<CONFIG:Debug>:/Od>
-        $<$<CONFIG:Debug>:/RTC1>
-        $<$<CONFIG:Release>:/O2>)
-else()
-    add_compile_options(
-        $<$<CONFIG:Release>:-O2>
-        -march=native)
-endif()
+add_compile_options($<$<CONFIG:Release>:-O2>)
 
 # ===== CONFIG PATH =====
 get_filename_component(ABSOLUTE_CONFIG_PATH "${PROJECT_SOURCE_DIR}/config" ABSOLUTE)
@@ -41,8 +32,18 @@ add_compile_definitions(CONFIG_PATH="${ABSOLUTE_CONFIG_PATH}")
 # ===== LOGGING =====
 find_package(spdlog QUIET)
 if (NOT spdlog_FOUND)
-    message(FATAL_ERROR "spdlog not found. Install it: "
-        "'sudo apt install libspdlog-dev' (Linux) or 'brew install spdlog' (macOS).")
+    message(STATUS "spdlog not found on this system: downloading spdlog 1.15.3")
+    include(FetchContent)
+    if (POLICY CMP0135)
+        cmake_policy(SET CMP0135 NEW)
+    endif()
+    FetchContent_Declare(spdlog
+        URL https://github.com/gabime/spdlog/archive/refs/tags/v1.15.3.tar.gz
+        URL_HASH SHA256=15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67
+    )
+    FetchContent_MakeAvailable(spdlog)
+    get_target_property(SPDLOG_INCLUDE_DIRS spdlog INTERFACE_INCLUDE_DIRECTORIES)
+    set_target_properties(spdlog PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${SPDLOG_INCLUDE_DIRS}")
 endif()
 
 # ===== SOURCES =====
@@ -89,11 +90,7 @@ target_include_directories(${ANALYSE_LOG_NAME} PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
 
-if(MSVC)
-    target_compile_options(${ANALYSE_LOG_NAME} PRIVATE /W4)
-else()
-    target_compile_options(${ANALYSE_LOG_NAME} PRIVATE -Wall -Wextra -Werror)
-endif()
+target_compile_options(${ANALYSE_LOG_NAME} PRIVATE -Wall -Wextra -Werror)
 
 add_custom_target(re
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
@@ -179,31 +176,19 @@ else()
     message(STATUS "Criterion not found, skipping unit_tests target")
 endif()
 
-if (WIN32)
-    add_compile_definitions(_WINSOCK_DEPRECATED_NO_WARNINGS)
-    target_link_libraries(${OUTPUT_NAME} PRIVATE ws2_32)
-endif()
-if (MSVC)
-    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-    target_compile_definitions(${OUTPUT_NAME} PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
-    target_compile_options(${OUTPUT_NAME} PRIVATE /wd4200 /wd4244 /wd4267 /wd4458 /wd4275)
-endif()
-
 target_include_directories(${OUTPUT_NAME} PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
 
-if(MSVC)
-    target_compile_options(${OUTPUT_NAME} PRIVATE /W4)
-else()
-    target_compile_options(${OUTPUT_NAME} PRIVATE -Wall -Wextra -Werror)
-endif()
+target_compile_options(${OUTPUT_NAME} PRIVATE -Wall -Wextra -Werror)
 
-if (WIN32)
-    add_custom_command(TARGET ${OUTPUT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:${OUTPUT_NAME}>
-            $<TARGET_FILE_DIR:${OUTPUT_NAME}>
-        COMMAND_EXPAND_LISTS
-    )
-endif()
+# ===== INSTALL =====
+set(CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/release")
+include(GNUInstallDirs)
+
+install(TARGETS ${OUTPUT_NAME} ${ANALYSE_LOG_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(FILES ${PROJECT_SOURCE_DIR}/config/whitelist.conf
+    DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/${OUTPUT_NAME}
+)
