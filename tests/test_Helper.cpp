@@ -6,7 +6,7 @@
 */
 
 #include <criterion/criterion.h>
-#include "Helper.hpp"
+#include "utils/Helper.hpp"
 
 using sniffer::Helper;
 
