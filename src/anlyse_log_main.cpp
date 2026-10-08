@@ -18,13 +18,14 @@
 #include <iostream>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <vector>
 
 using namespace analyser;
 
 static void printUsage(const char *programName)
 {
-    std::cout << "Usage: " << programName << " [-w <whitelist>] <log file>\n\n"
+    std::cout << "Usage: " << programName << " [-w <whitelist>] [-f <report file>] <log file>\n\n"
         "Analyses a my_sniffer log (minimum or detailed mode) and reports\n"
         "[SERVICE-SPIKE]: abnormal volume from one IP to one service (IP:port).\n"
         "[NETWORK-SPIKE]: whole network traffic at least 3x its usual average.\n"
@@ -37,11 +38,13 @@ static void printUsage(const char *programName)
         "Options:\n"
         "  -h, --help                  Show this help message and exit\n"
         "  -w, --whitelist <file>      Trusted IPs and ranges (CIDR), one per line:\n"
-        "                              enables [FOREIGN-IP] (e.g. -w config/whitelist.conf)\n";
+        "                              enables [FOREIGN-IP] (e.g. -w config/whitelist.conf)\n"
+        "  -f, --file <file>           Also write the report to <file> (overwritten if it exists)\n";
     return;
 }
 
-static int parseArgs(int argc, char **argv, std::string &logPath, std::optional<std::string> &whitelistPath)
+static int parseArgs(int argc, char **argv, std::string &logPath, std::optional<std::string> &whitelistPath,
+    std::optional<std::string> &reportPath)
 {
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -57,6 +60,14 @@ static int parseArgs(int argc, char **argv, std::string &logPath, std::optional<
             whitelistPath = argv[++i];
         } else if (arg.rfind("--whitelist=", 0) == 0)
             whitelistPath = arg.substr(12);
+        else if (arg == "-f" || arg == "--file") {
+            if (i + 1 >= argc) {
+                std::cerr << "Missing value for " << arg << std::endl;
+                return 2;
+            }
+            reportPath = argv[++i];
+        } else if (arg.rfind("--file=", 0) == 0)
+            reportPath = arg.substr(7);
         else if (logPath.empty() && arg[0] != '-')
             logPath = arg;
         else {
@@ -100,13 +111,46 @@ static bool startsCapture(const std::filesystem::path &path)
     return firstLine.find("Capture started") != std::string::npos;
 }
 
+static bool sameFile(const std::filesystem::path &first, const std::filesystem::path &second)
+{
+    std::error_code error;
+
+    return std::filesystem::equivalent(first, second, error);
+}
+
+static bool overwritesInput(const std::string &reportPath, const std::vector<std::filesystem::path> &parts,
+    const std::optional<std::string> &whitelistPath)
+{
+    if (whitelistPath && sameFile(reportPath, *whitelistPath))
+        return true;
+    for (const std::filesystem::path &part : parts)
+        if (sameFile(reportPath, part))
+            return true;
+    return false;
+}
+
+static bool writeReport(const Report &report, const std::string &reportPath)
+{
+    std::ofstream file(reportPath);
+
+    if (file)
+        report.print(file);
+    if (!file) {
+        std::cerr << "Cannot write report file: " << reportPath << std::endl;
+        return false;
+    }
+    std::cout << "\nReport written to " << reportPath << std::endl;
+    return true;
+}
+
 int main(int argc, char **argv)
 {
     std::string logPath;
     std::optional<std::string> whitelistPath;
+    std::optional<std::string> reportPath;
     Report report;
 
-    int result = parseArgs(argc, argv, logPath, whitelistPath);
+    int result = parseArgs(argc, argv, logPath, whitelistPath, reportPath);
     if (result == 1)
         return 0;
     if (result == 2)
@@ -130,6 +174,11 @@ int main(int argc, char **argv)
     SpikeNetworkDetector networkSpikes;
     BeaconDetector beacons;
     ProtocolDetector protocols;
+
+    if (reportPath && overwritesInput(*reportPath, parts, whitelistPath)) {
+        std::cerr << "Error: report file " << *reportPath << " is a file read by the analysis" << std::endl;
+        return 1;
+    }
 
     report.setLog(logPath, parts.size());
     for (const std::filesystem::path &part : parts) {
@@ -168,5 +217,7 @@ int main(int argc, char **argv)
     }
 
     report.print(std::cout);
+    if (reportPath && !writeReport(report, *reportPath))
+        return 1;
     return 0;
 }
